@@ -2,6 +2,8 @@ function text_(v,max){if(typeof v!=='string')fail_('INVALID_INPUT','Text field r
 function stable_(s){return bridgeHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,s)).slice(0,32);}
 function isoDate_(d){if(typeof d!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d+'T12:00:00Z'))||new Date(d+'T12:00:00Z').toISOString().slice(0,10)!==d)fail_('INVALID_INPUT','Invalid calendar date');return d;}
 function folder_(parent,name){const it=parent.getFoldersByName(name);if(it.hasNext()){const f=it.next();if(it.hasNext())fail_('VERSION_CONFLICT','Duplicate folder requires manual resolution');return f;}return parent.createFolder(name);}
+function folderCandidates_(root,so){const it=root.getFolders(),found=[];while(it.hasNext()){const f=it.next(),name=f.getName();if(name===so||['(', ' ', '_', '-'].some(separator=>name.startsWith(so+separator)))found.push({id:f.getId(),name,url:f.getUrl()});}return found;}
+function findOrderFolders(so){requireManager_();so=text_(so,100);if(!so||/[\\/]/.test(so))fail_('INVALID_INPUT','Order No. required');const rootId=PropertiesService.getScriptProperties().getProperty('ROOT_ID')||config_('DRIVE_ROOT_FOLDER_ID');return folderCandidates_(DriveApp.getFolderById(rootId),so);}
 function fileName_(s){return text_(s,240).replace(/[\\/<>:"|?*\u0000-\u001f]/g,'_').replace(/^\.+/,'_')||'document';}
 function notify_(email,caseId,objectId,message){if(!email)return;const id=stable_([BRIDGE_REQUEST_KEY,objectId,email,message].join(':'));if(!rows_('20_NOTIFICATIONS').some(x=>x.id===id))add_('20_NOTIFICATIONS',{id,email,case_id:caseId,object_id:objectId,message,read:'NO',created_at:now_()});}
 function markNotification(id){const u=user_();return lock_(()=>{const n=rows_('20_NOTIFICATIONS').find(n=>n.id===id&&n.email===u.email);if(!n)fail_('PERMISSION_DENIED','Notification outside scope');patch_('20_NOTIFICATIONS',id,{read:'YES'});return true;});}
@@ -19,17 +21,21 @@ const BLOCKS_={
  'Supplier FSC license':'02_FSC_Certification','FSC Cert':'02_FSC_Certification','Transport invoice':'03_Transport','GEO location':'04_Geolocation'
 };
 function createCase(input){return createOrder(input);}
-function createOrder(input){const u=requireManager_();return withOperation_(()=>{
+function createOrder(input){const u=requireManager_(),retry=rows_('21_OPERATIONS').some(x=>x.actor===u.email&&x.action==='createOrder'&&x.id===stable_(u.email+':createOrder:'+BRIDGE_REQUEST_KEY));return withOperation_(()=>{
  const valid=validateFile_(input.file);if(valid.type!=='application/pdf')fail_('INVALID_FILE','Sales Order must be PDF');const so=text_(input.so,100);if(!so||/[\\/]/.test(so))fail_('INVALID_INPUT','Order No. is required');if(input.due)isoDate_(input.due);const image=input.image?validateFile_(input.image):null;if(image&&!['image/png','image/jpeg'].includes(image.type))fail_('INVALID_FILE','Image must be PNG/JPG');
  const previous=rows_('01_SO_MASTER').find(c=>c.so===so);if(previous&&previous.request_key!==BRIDGE_REQUEST_KEY)fail_('DUPLICATE_ORDER','Open the existing order');
  const id=previous?previous.id:stable_('order:'+so),rootId=PropertiesService.getScriptProperties().getProperty('ROOT_ID')||config_('DRIVE_ROOT_FOLDER_ID');if(!rootId)fail_('ROOT_FOLDER_NOT_RESOLVED','Configure a real Drive root folder');
- const root=DriveApp.getFolderById(rootId),f=previous?DriveApp.getFolderById(previous.folder):folder_(root,fileName_(so));
+ const root=DriveApp.getFolderById(rootId),candidates=previous?[]:folderCandidates_(root,so),selected=candidates.find(x=>x.id===input.existing_folder_id);
+ if(input.existing_folder_id&&!selected)fail_('INVALID_INPUT','Selected folder is not a verified order candidate under the configured root');
+ const canonical=candidates.filter(x=>x.name===so);
+ if(!previous&&candidates.length&&!selected&&!(retry&&canonical.length===1&&candidates.length===1))fail_('EXISTING_FOLDER_REVIEW_REQUIRED','Select the existing order folder after reviewing its name and contents');
+ const f=previous?DriveApp.getFolderById(previous.folder):selected?DriveApp.getFolderById(selected.id):canonical.length===1?DriveApp.getFolderById(canonical[0].id):folder_(root,fileName_(so));
  const soFolder=folder_(f,'00_SO');['90_Processed','98_Export','99_Archive'].forEach(n=>folder_(f,n));
  const docId=stable_('SO:'+id),file=storeFile_(soFolder,docId,valid,so+'_SO.pdf');
  let imageId='';if(image){imageId=stable_('image:'+id);const imageFile=storeFile_(soFolder,imageId,image,so+'_Product_Image.'+(image.type==='image/png'?'png':'jpg'));if(!rows_('06_DOCUMENT_REGISTER').some(d=>d.id===imageId))add_('06_DOCUMENT_REGISTER',{id:imageId,case_id:id,kind:'PRODUCT_IMAGE',name:imageFile.getName(),file_id:imageFile.getId(),version:1,status:'UPLOADED',uploaded_by:u.email,created_at:now_(),mime_type:image.type,active_version:'YES',updated_at:now_(),request_key:BRIDGE_REQUEST_KEY});}
  if(!previous)add_('01_SO_MASTER',{id,so,customer:text_(input.customer||'',200),po:text_(input.po||'',200),due:input.due||'',owner:u.email,folder:f.getId(),status:'NOT_STARTED',source_system:'MANUAL',source_key:id,created_at:now_(),updated_at:now_(),product:text_(input.product||'',300),product_image_id:imageId,so_document_id:docId,request_key:BRIDGE_REQUEST_KEY});
  if(!rows_('06_DOCUMENT_REGISTER').some(d=>d.id===docId))add_('06_DOCUMENT_REGISTER',{id:docId,case_id:id,kind:'SO',name:file.getName(),file_id:file.getId(),version:1,status:'UPLOADED',uploaded_by:u.email,created_at:now_(),mime_type:'application/pdf',active_version:'YES',updated_at:now_(),request_key:BRIDGE_REQUEST_KEY});
- audit_('ORDER_CREATED',id,id,'','NOT_STARTED',u.email);return {id};
+ if(!rows_('08_ACTIVITY_LOG').some(a=>a.action==='ORDER_CREATED'&&a.case_id===id))audit_('ORDER_CREATED',id,id,'','NOT_STARTED',u.email);return {id};
  });}
 function parseMaterials_(caseId,input){const u=requireManager_(),c=order_(caseId,u);let obj;try{obj=typeof input==='string'?JSON.parse(input):input;}catch(e){fail_('INVALID_JSON','JSON cannot be parsed');}
  if(!obj||obj.order_no!==c.so||!Array.isArray(obj.materials)||!obj.materials.length||obj.materials.length>100)fail_('INVALID_INPUT','Order No. must match; provide 1–100 materials');

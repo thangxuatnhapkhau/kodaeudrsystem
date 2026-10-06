@@ -1,0 +1,1 @@
+The files prefixed `v2_baseline_` and the other preexisting evidence artifacts came from the 2.0 UI Redesign staging package. They are retained for comparison, not evidence of 2.1 acceptance. The current audit, legal sources, staging gates and results are in `../DEPLOYMENT_V2_1.md`.

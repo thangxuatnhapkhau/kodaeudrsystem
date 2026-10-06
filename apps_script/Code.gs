@@ -81,6 +81,9 @@ function user_(){
  const email=String(BRIDGE_ACTOR||Session.getActiveUser().getEmail()||'').toLowerCase();
  const u=rows_('05_OWNER_MASTER').find(x=>String(x.email).toLowerCase()===email&&x.active==='YES');
  if(!u)fail_('AUTH_REQUIRED','User is not active');
+ if(BRIDGE_AUTH_UID&&(u.auth_provider!=='FIREBASE'||u.auth_uid!==BRIDGE_AUTH_UID))fail_('AUTH_REQUIRED','Firebase account is not provisioned for this owner');
+ if(u.auth_provider==='FIREBASE'&&(!BRIDGE_AUTH_UID||u.auth_uid!==BRIDGE_AUTH_UID))fail_('AUTH_REQUIRED','Account identity mismatch');
+ if(u.must_change_password==='YES'&&!['bootstrap','recordLogin','authState','authPasswordChanged'].includes(BRIDGE_ACTION))fail_('PASSWORD_CHANGE_REQUIRED','Change password before accessing the workspace');
  if(!ROLES_.includes(u.role))fail_('PERMISSION_DENIED','Unknown role');
  if(u.role==='SUPPLIER_USER'&&!rows_('14_SUPPLIERS').some(s=>s.id===u.supplier_id&&s.active==='YES'))fail_('PERMISSION_DENIED','Supplier disabled');
  return u;
