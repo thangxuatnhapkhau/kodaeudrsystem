@@ -1,0 +1,7 @@
+UI revision verification, 2026-10-06
+- JavaScript syntax: node --check public/app.js (passed)
+- Netlify function syntax: node --check netlify/functions/call.mjs (passed)
+- Existing mocked backend/security tests: npm test (passed)
+- DOM-string smoke with mocked empty and populated bootstrap: sign-in, dashboard, Orders and workspace (passed)
+- Backend files, functions and test suite preserved byte-for-byte from supplied staging ZIP.
+- Browser visual inspection against authenticated Netlify/Apps Script staging was not available. No production deployment or live Google action was performed.

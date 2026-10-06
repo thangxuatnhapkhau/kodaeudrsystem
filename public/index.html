@@ -11,16 +11,17 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><img src="/koda-logo.png" alt="KODA official logo"><div class="brand-caption">EUDR <span>WORKSPACE</span></div></div>
-      <div class="sidebar-section">OPERATIONS</div>
+      <div class="sidebar-section" data-i18n="Operations">OPERATIONS</div>
       <nav id="nav" aria-label="Main navigation"></nav>
-      <div class="sidebar-footer"><span class="pilot-mark">STAGING · 2.1</span><p>Structured evidence for transparent human review</p></div>
+      <div class="sidebar-footer"><span class="pilot-mark">STAGING 2.1</span><p data-i18n="Evidence readiness supports human review. It is not a regulatory decision.">Evidence readiness supports human review. It is not a regulatory decision.</p></div>
     </aside>
     <div class="workspace-shell">
-      <header class="topbar"><div class="topbar-context"><span class="topbar-dot"></span><span id="pageTitle">Workspace</span></div><div class="topbar-account"><div class="language-switch" role="group" aria-label="Language"><button data-language="vi" aria-label="Tiếng Việt">VI</button><span aria-hidden="true">|</span><button data-language="en" aria-label="English">EN</button></div><span id="identity"></span><button id="changePassword" class="quiet-button" hidden>Change password</button><button id="logout" class="quiet-button" hidden>Sign out</button></div></header>
+      <header class="topbar"><div class="topbar-context"><span class="topbar-dot"></span><span id="pageTitle">Workspace</span></div><div class="topbar-account"><label class="language-control"><span class="sr-only">Language</span><select id="language" aria-label="Language"><option value="en">EN</option><option value="vi">VI</option></select></label><span id="identity"></span><button id="logout" class="quiet-button" hidden data-i18n="Sign out">Sign out</button></div></header>
       <div class="content"><div id="msg" role="status" aria-live="polite"></div><main id="main">Loading your workspace…</main></div>
     </div>
   </div>
-  <dialog id="drawer"><button id="closeDrawer" aria-label="Close dialog">Close</button><div id="drawerContent"></div></dialog>
+  <dialog id="drawer"><button id="closeDrawer" aria-label="Close dialog" data-i18n="Close">Close</button><div id="drawerContent"></div></dialog>
+  <script src="/i18n.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
 </html>
