@@ -1,7 +1,29 @@
 // Display labels only. Backend enums, evidence, IDs and user-entered values stay canonical.
 const translations={
- en:{},
+ en:{
+  AUTH_EMAIL_UNVERIFIED:'Verify your email before signing in.',
+  AUTH_TOKEN_EXPIRED:'Your session expired. Sign in again.',
+  AUTH_TOKEN_REVOKED:'Your session was revoked. Sign in again.',
+  AUTH_TOKEN_INVALID:'Your login session is not valid for this project. Sign in again.',
+  AUTH_ACCOUNT_DISABLED:'This login account is disabled. Contact your administrator.',
+  FIREBASE_CONFIG_INVALID:'Firebase server credentials are invalid. Ask your administrator to check FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID.',
+  FIREBASE_PERMISSION_DENIED:'Firebase service account lacks Authentication permissions. Contact your administrator.',
+  FIREBASE_UNAVAILABLE:'Firebase verification is temporarily unavailable. Try again.'
+ },
  vi:{
+  'Verify your email':'Xác minh email','Send verification email':'Gửi email xác minh','I have verified my email':'Tôi đã xác minh email','Back to sign in':'Quay lại đăng nhập',
+  'Your password was accepted. Verify your email before opening the workspace.':'Mật khẩu đã được chấp nhận. Hãy xác minh email trước khi vào workspace.',
+  'Verification email sent. Open the link in your inbox, then return here.':'Đã gửi email xác minh. Mở liên kết trong hộp thư, sau đó quay lại đây.',
+  'Could not send the verification email. Try again or sign in again.':'Chưa gửi được email xác minh. Hãy thử lại hoặc đăng nhập lại.',
+  'Your email is not verified yet. Open the verification link first.':'Email chưa được xác minh. Hãy mở liên kết xác minh trong hộp thư trước.',
+  AUTH_EMAIL_UNVERIFIED:'Hãy xác minh email trước khi đăng nhập.',
+  AUTH_TOKEN_EXPIRED:'Phiên đã hết hạn. Hãy đăng nhập lại.',
+  AUTH_TOKEN_REVOKED:'Phiên đã bị thu hồi. Hãy đăng nhập lại bằng mật khẩu hiện tại.',
+  AUTH_TOKEN_INVALID:'Phiên đăng nhập không hợp lệ cho Firebase project này. Hãy đăng nhập lại.',
+  AUTH_ACCOUNT_DISABLED:'Tài khoản Firebase bị vô hiệu hóa. Liên hệ quản trị.',
+  FIREBASE_CONFIG_INVALID:'Cấu hình Firebase trên máy chủ không hợp lệ. Quản trị cần kiểm tra FIREBASE_SERVICE_ACCOUNT_JSON và FIREBASE_PROJECT_ID.',
+  FIREBASE_PERMISSION_DENIED:'Service account chưa có quyền Firebase Authentication. Liên hệ quản trị.',
+  FIREBASE_UNAVAILABLE:'Chưa kết nối được dịch vụ xác thực Firebase. Hãy thử lại.',
   'Operations':'Vận hành','Workspace':'Workspace','Secure access':'Truy cập bảo mật','Order workspace':'Workspace đơn hàng','Sign out':'Đăng xuất','Close':'Đóng',
   'Dashboard':'Tổng quan','Orders':'Đơn hàng','My Tasks':'Công việc của tôi','Calendar':'Lịch','AI Assistant':'Trợ lý AI','Export':'Xuất hồ sơ','Audit Trail':'Nhật ký kiểm toán','Suppliers':'Nhà cung cấp','Users':'Người dùng','Settings':'Cài đặt',
   'Your evidence workspace':'Workspace hồ sơ của bạn','Username / Email':'Tên đăng nhập / Email','Password':'Mật khẩu','Sign In':'Đăng nhập','Forgot Password?':'Quên mật khẩu?','Reset password':'Đặt lại mật khẩu','Change Your Password':'Đổi mật khẩu','New password':'Mật khẩu mới','Confirm new password':'Xác nhận mật khẩu mới','Change password':'Đổi mật khẩu','At least 12 characters.':'Ít nhất 12 ký tự.','Access follows your assigned orders and role.':'Quyền truy cập phụ thuộc vào vai trò và đơn hàng được phân công.',
