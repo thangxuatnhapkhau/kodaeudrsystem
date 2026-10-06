@@ -1,5 +1,5 @@
 import {createHmac, createHash, randomUUID, timingSafeEqual} from 'node:crypto';
-import {verifiedActor} from './_firebase.mjs';
+import {verifiedActor,firebaseFailure} from './_firebase.mjs';
 const digest=s=>createHash('sha256').update(s).digest('hex');
 const equal=(a,b)=>timingSafeEqual(createHash('sha256').update(a).digest(),createHash('sha256').update(b).digest());
 const actions=new Set(['beginUpload','uploadChunk','finishUpload','getDocumentChunk','recordLogin','bootstrap','createCase','completeCase','createOrder','findOrderFolders','previewMaterials','confirmMaterials','addChainNode','updateTask','uploadEvidence','submitDocument','reviewDocument','getDocument','addComment','uploadProcessed','verifyProcessed','syncCalendar','getAiPrompt','importAiResult','saveGeo','reviewGeo','exportPackage','updateMaterialInfo','saveCertificate','saveCountryRisk','manageUser','manageSupplier','saveSettings','markNotification']);
@@ -13,8 +13,10 @@ export async function handler(event){
  if(!origins.length||!origins.includes(origin))return error(403,'ORIGIN_DENIED','Origin is not allowed',requestId);
  const authorization=event.headers?.authorization||event.headers?.Authorization||'',token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
  let actor='',authUid='';
- try{const verified=await verifiedActor(event);actor=verified.email;authUid=verified.uid;}catch{
-  if(process.env.LEGACY_TOKEN_LOGIN!=='true')return error(401,'AUTH_REQUIRED','Authentication required',requestId);
+ try{const verified=await verifiedActor(event);actor=verified.email;authUid=verified.uid;}catch(authError){
+  const failure=firebaseFailure(authError);
+  console.error('FIREBASE_AUTH_FAILURE',JSON.stringify({requestId,code:failure.code}));
+  if(process.env.LEGACY_TOKEN_LOGIN!=='true')return error(failure.status,failure.code,failure.message,requestId);
   if(token.length<32||token.length>256)return error(401,'AUTH_REQUIRED','Authentication required',requestId);
   let entries;try{entries=JSON.parse(process.env.TOKEN_HASHES_JSON||'[]');if(!Array.isArray(entries))throw Error();}catch{return error(503,'CONFIG_REQUIRED','Token registry invalid',requestId);}
   const hash=digest(token),matches=entries.filter(x=>typeof x.sha256==='string'&&equal(x.sha256,hash)&&x.active!==false&&(!x.expires_at||Date.parse(x.expires_at)>Date.now()));

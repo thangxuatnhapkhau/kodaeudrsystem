@@ -1,5 +1,5 @@
 import {randomBytes,randomUUID} from 'node:crypto';
-import {firebaseAuth,verifiedActor} from './_firebase.mjs';
+import {firebaseAuth,verifiedActor,firebaseFailure} from './_firebase.mjs';
 import {signedBridge} from './_bridge.mjs';
 
 const reply=(statusCode,value)=>({statusCode,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},body:JSON.stringify(value)});
@@ -41,7 +41,10 @@ export async function handler(event){
   }
   return reply(400,{ok:false,code:'UNKNOWN_ACTION'});
  }catch(e){
-  const code=['AUTH_REQUIRED','CONFIG_REQUIRED','PERMISSION_DENIED','UPSTREAM_UNAVAILABLE','ACCOUNT_EXISTS','AUTH_STATE_INVALID'].includes(e.message)?e.message:'AUTH_FAILED';
-  return reply(code==='AUTH_REQUIRED'?401:code==='CONFIG_REQUIRED'||code==='UPSTREAM_UNAVAILABLE'?503:code==='ACCOUNT_EXISTS'?409:403,{ok:false,code});
+  const code=['CONFIG_REQUIRED','PERMISSION_DENIED','UPSTREAM_UNAVAILABLE','UPSTREAM_ERROR','ACCOUNT_EXISTS','AUTH_STATE_INVALID'].includes(e.message)?e.message:'';
+  if(code)return reply(code==='CONFIG_REQUIRED'||code==='UPSTREAM_UNAVAILABLE'||code==='UPSTREAM_ERROR'?503:code==='ACCOUNT_EXISTS'?409:403,{ok:false,code});
+  const failure=firebaseFailure(e),requestId=randomUUID();
+  console.error('FIREBASE_AUTH_FAILURE',JSON.stringify({requestId,code:failure.code}));
+  return reply(failure.status,{ok:false,code:failure.code,requestId});
  }
 }
