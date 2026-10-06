@@ -1,136 +1,87 @@
-# KODA EUDR 2.0 — incremental staging candidate
+# KODA EUDR WORKSPACE v2.1 — gói staging
 
-Status: 2026-10-06, staging source only. Production has not been updated.
+**Trạng thái:** mã nguồn đã biên dịch và kiểm thử cục bộ. Chưa triển khai Netlify/Apps Script, chưa bật Identity trên site thật, chưa chạy smoke test với tài khoản được mời. Không sử dụng gói này để thay thế production trực tiếp.
 
-The package extends the supplied vanilla HTML/CSS/JS → Netlify Function → signed Apps Script bridge → Google Sheet/Drive/Calendar architecture. It contains complete Apps Script service files, frontend files, configuration templates and 40 mocked service/security test groups. It does not certify EUDR compliance or submit an official declaration.
+## 1. Trước → Sau
 
-## Run locally
+| Phần | Bản staging 2.0 | Bản 2.1 |
+|---|---|---|
+| Đăng nhập | Người dùng nhập personal token | Email/mật khẩu qua Netlify Identity, invite-only; Function xác minh phiên |
+| Phân quyền | Apps Script đối chiếu email trong `05_OWNER_MASTER` | Giữ nguyên; email lấy từ Identity đã xác minh và ký HMAC |
+| Ngôn ngữ | Giao diện tiếng Anh | Bộ từ điển VI/EN tập trung, nút trên header, lưu lựa chọn |
+| Tạo đơn | Đợi và chuyển trang ngay | Trạng thái đang xử lý, kết quả thành công/lỗi, chọn bước tiếp theo |
+| AI prompt | Mô tả ngắn, yêu cầu đính kèm file | ID/file/folder/Sheet/tab thực, chế độ hành động, nguồn và đích rõ ràng |
+| Pháp lý | Cảnh báo khi cấu hình chưa rà soát | Giữ cảnh báo; bổ sung nguồn chính thức để người có thẩm quyền kiểm tra |
 
-Node.js >=20, no npm dependency installation required.
+Luồng: **Browser → Netlify Identity session → `/api/call` Function v2 → signed bridge → Apps Script → Sheet/Drive/Calendar**.
+
+Identity chỉ xác thực danh tính. Apps Script vẫn đối chiếu `05_OWNER_MASTER` ở **mỗi request** và áp dụng quyền theo vai trò, đơn hàng, nhà cung cấp. Không lấy role từ frontend hoặc metadata Identity làm quyền KODA.
+
+## 2. Tệp thay đổi
+
+| Tệp | Mục đích | Rủi ro cần kiểm tra |
+|---|---|---|
+| `src/app.js` | Đăng nhập/mời/khôi phục mật khẩu, Create Order, Prompt Studio, giao diện hai ngôn ngữ | Phiên Identity và callback trên Netlify |
+| `src/i18n.js` | Từ điển tập trung và chuyển ngôn ngữ khi giữ nguyên màn hình hiện tại | Kiểm tra tất cả chuỗi động |
+| `public/app.js` | Bản đã bundle, dùng khi site chạy | Luôn chạy build trước triển khai |
+| `public/index.html`, `public/style.css` | Tên sản phẩm, tagline, nút ngôn ngữ, phản hồi tiến trình | Responsive và accessibility |
+| `netlify/functions/call.mjs` | Xác minh Identity bằng `getUser()`, ký actor, giữ origin/action/HMAC | Chỉ chạy Function v2 trên Netlify |
+| `apps_script/PromptService.gs` | Nguồn đúng trong Drive và đích cập nhật có kiểm soát | Quyền đọc file, đường dẫn thực, nguồn thiếu |
+| `apps_script/AuthService.gs`, `Bridge.gs`, `Code.gs` | Audit đăng xuất, allowlist, tên sản phẩm | Deploy đủ toàn bộ tệp Apps Script |
+| `package.json`, `package-lock.json`, `netlify.toml`, `.env.example` | Build, dependency Identity và cấu hình | Build deploy từ repository |
+| `tests/v2.1.test.mjs` | Kiểm tra actor ký, origin, lỗi quyền, provenance của prompt | Chưa thay thế smoke test thật |
+
+## 3. Cấu trúc dữ liệu
+
+**Không cần đổi schema Sheet.** Đã đọc metadata 23 tab và các header trọng yếu của workbook thật. Không ghi dữ liệu vào Sheet. `09_CONFIG` hiện chứa version pháp lý `NOT_REVIEWED`; cảnh báo hiện hành phải tiếp tục hiển thị. `22_COUNTRY_RISK` hiện chỉ có header. Người có thẩm quyền rà soát nguồn pháp lý rồi ghi qua chức năng Settings; không tự điền Vietnam `LOW` bằng mã nguồn.
+
+## 4. Cấu hình
+
+### Netlify staging
+
+1. Tạo nhánh từ repository **thực sự đang kết nối với site**; so sánh diff với source production trước khi merge. Bản production quan sát ngày 06/10/2026 vẫn có tiêu đề `KODA EUDR · Evidence workspace`, khác ZIP staging này.
+2. Commit các tệp trong gói 2.1 lên nhánh đó. Build command: `npm run build`; publish `public`; Functions `netlify/functions`. Chạy `npm ci` trong CI nếu dùng lockfile.
+3. Trên Netlify staging, bật **Identity**; trong **Identity → Registration → Registration preferences**, chọn **Invite only**. Mặc định là Open nên phải kiểm tra thủ công.
+4. Cấu hình env `APPS_SCRIPT_WEBAPP_URL=<SET_IN_NETLIFY_UI>`, `BRIDGE_SECRET=<SET_IN_NETLIFY_UI>`, `ALLOWED_ORIGINS=<STAGING_ORIGIN>`. Không đưa giá trị secret vào Git, Sheet, trình duyệt hoặc báo cáo.
+5. Trong Apps Script staging, đặt Script Properties `BRIDGE_SECRET=<SET_IN_APPS_SCRIPT_PROPERTIES>`, `ALLOWED_ORIGINS=<STAGING_ORIGIN>`, `DB_ID=<STAGING_SHEET_ID>`, `ROOT_ID=<STAGING_ROOT_FOLDER_ID>`, `CALENDAR_ID=<STAGING_CALENDAR_ID>` theo cấu hình đang có. Secret hai đầu bridge phải khớp.
+6. Deploy Apps Script **phiên bản mới** với toàn bộ tệp `.gs`; cập nhật `APPS_SCRIPT_WEBAPP_URL` của **staging**. Không chạy `setup()` hay `migrateV2()` trên workbook thật vì schema đã tồn tại.
+7. Thêm user trong `05_OWNER_MASTER`, sau đó mời **đúng email đó** trong Identity → Users. User tự tạo mật khẩu. Tắt đăng ký công khai.
+
+Với bản 2.1, `TOKEN_HASHES_JSON`, `PILOT_ADMIN_TOKEN` và `ALLOW_PILOT_ADMIN` không được đọc bởi Function mới. Chỉ xóa/thu hồi chúng sau khi hoàn tất cutover và cửa sổ rollback.
+
+## 5. QA và giới hạn hiện tại
+
+| Kiểm tra | Trạng thái | Bằng chứng |
+|---|---|---|
+| Cú pháp JS, build bundle | PASS | `npm run check`, `npm run build` |
+| Identity email được ký; bỏ qua email/role giả từ browser | PASS cục bộ | `tests/v2.1.test.mjs` |
+| Origin thiếu hoặc phiên thiếu bị chặn; 403 giữ nguyên | PASS cục bộ | `tests/v2.1.test.mjs` |
+| Prompt có ID nguồn, link Drive/Sheet, đích tab, action mode; nguồn mất thì lỗi | PASS cục bộ | `tests/v2.1.test.mjs` |
+| SO25-2183 nằm trong `00_SO` của folder đơn đã ghi nhận | PASS metadata | Đọc Sheet và Drive bằng quyền hiện có |
+| Đăng nhập, mời, reset password, 6 vai trò, supplier isolation | PENDING staging | Cần bật Identity và tài khoản kiểm thử |
+| Tạo đơn thật, retry/timeout, upload, Calendar, legal warning | PENDING staging | Cần Deploy Preview và backend staging |
+| Hai ngôn ngữ trên mọi màn hình, keyboard/mobile | PENDING manual | Cần xem UI trên staging |
+| 47 acceptance/security scenarios trong yêu cầu | PENDING full QA | Chưa có môi trường staging kết nối |
+
+**Không tuyên bố đã đạt acceptance đầy đủ.** Các bài test cũ `tests/v2.test.mjs` thuộc bản token 2.0, lưu như tham chiếu và không phải gate 2.1.
+
+## 6. Kiểm tra phát hành và rollback
+
+1. Dùng Deploy Preview với Identity staging, Sheet/Drive/Calendar staging; chạy ma trận QA trong yêu cầu.
+2. Kiểm tra ADMIN, MARKETING, EUDR_REVIEWER, VIEWER, SUPPLIER_USER, user inactive và không có trong Owner Master. Test tài liệu, order và task chéo phạm vi.
+3. Tạo SO thử **mới** trên staging; kiểm tra một hàng `01_SO_MASTER`, một folder, một SO document, request key, trạng thái thành công và retry.
+4. Test prompt SO25-2183 (chỉ đọc); không nhập dữ liệu AI vào workbook production để thử.
+5. Rà soát bản pháp lý theo `LEGAL_REFERENCE.md`; người được ủy quyền ghi version và ngày. `LOW RISK` không thành badge tuân thủ.
+6. Chỉ sau khi staging đạt: đưa mã lên nhánh production, cập nhật Netlify Identity/config và Apps Script production theo cùng phiên bản; xác nhận người dùng đã nhận lời mời; sau rollback window mới thu hồi token cũ.
+7. Nếu cần rollback: quay về commit/deploy trước đó **và** Apps Script deployment URL cũ cùng cấu hình auth cũ trong cửa sổ rollback. Không xóa/khôi phục đè hàng Sheet hay file Drive; các giao dịch phát sinh trong staging/production được giữ và đối chiếu qua `08_ACTIVITY_LOG` và `21_OPERATIONS`.
+
+## 7. Lệnh cục bộ
 
 ```bash
-npm test
+npm ci
 npm run check
-python3 -m http.server 8765 --directory public
+npm run build
+npm test
 ```
 
-Static server previews only the frontend shell. Authenticated workflows require the real staging Netlify proxy and Google backend; tests mock those services. Local browser UI QA could not be run in the audit environment.
-
-## Package layout
-
-- apps_script/: complete changed backend files and manifest.
-- netlify/functions/call.mjs: signed server proxy and personal identity registry.
-- public/: existing vanilla stack, official KODA logo and expanded workspace.
-- evidence/: observed Sheet snapshot, exact final schema, endpoint map, QA output, source register and migration/QA checklist.
-- changes.patch: textual diff against supplied baseline (logo binary included separately).
-- backups/: unchanged source ZIP + checksum. This is not a retrieved backup of the live Apps Script project.
-
-## Configuration
-
-- **Spreadsheet ID**: `1xura5W6coeGeJsc1zQMP6Emw_QMTv5XAf0bqpC5Uk3A`. Production observed; replace with staging copy ID.
-- **Drive Root Folder ID**: `1BWXpf-L6yBPQtXbskoQKMfN890aZXCJg`. Real folder verified from 09_CONFIG; use dedicated staging root.
-- **Google Calendar ID**: `44c53155b661c93b06c6ee49bd9cce5764a91fa80cc57c805de639d3483cfce2@group.calendar.google.com`. Not visible to current connector account; test deploying account separately.
-- **Netlify production URL**: `https://koda-eudr-system.netlify.app/`. Read-only inspection, no deployment.
-- **ALLOWED_ORIGINS**: `Exact staging URL in both Netlify and Apps Script`. No wildcard; production origin only after release.
-- **APPS_SCRIPT_WEBAPP_URL**: `New staging /exec deployment URL`. Netlify environment; live project was not retrieved.
-- **DB_ID / ROOT_ID / CALENDAR_ID**: `Staging Sheet / Drive / Calendar IDs`. Apps Script properties; do not call prepared-sheet reconnect helpers.
-- **BRIDGE_SECRET**: `Fresh random >=32 characters`. Same server-side secret in Netlify + Apps Script; never in frontend.
-- **TOKEN_HASHES_JSON**: `SHA-256 personal token registry`. Netlify only: sha256, email, active, expires_at; distinct tokens >=32 random characters.
-- **ALLOW_PILOT_ADMIN**: `false`. Shared pilot credential disabled by default.
-- **TIME_ZONE / FRONTEND_URL**: `Asia/Ho_Chi_Minh / exact staging URL`. Set Google calendar timezone and Sheet 09_CONFIG explicitly.
-- **Legal settings**: `NOT_REVIEWED until human verification`. LEGAL_RULE_VERSION, ANNEX_I_VERSION, COUNTRY_RISK_VERSION, LAST_LEGAL_REVIEW_DATE, LEGAL_REVIEWED_BY.
-
-## Staged deployment and rollback
-
-### 1. Capture production backup
-
-Retrieve actual current Apps Script project files and manifest, deployment version/settings, Sheet values/formulas/format/protections, Drive inventory/ACLs and Calendar event mapping. Export Netlify/GAS settings securely outside Git. Supplied ZIP is a source backup, not independent proof of live deployed script code.
-
-### 2. Create Git branch
-
-Use the actual existing repository once its URL/access is supplied; create upgrade/eudr-v2-staging. Apply staging/ contents to repository root. Preserve backup ZIP outside deploy root. Do not create a competing production repository or replace hosting providers.
-
-### 3. Create isolated Google staging
-
-Copy current Sheet including auxiliary tabs and any formulas; use a dedicated staging Drive root and Calendar. Ensure the deploying owner is an existing active ADMIN in the staging user table. Do not test with production IDs.
-
-### 4. Install complete Apps Script files
-
-Replace project files with all supplied .gs files and appsscript.json. Set DB_ID, ROOT_ID, CALENDAR_ID, BRIDGE_SECRET, ALLOWED_ORIGINS to staging values in Script properties. Do not run attachPreparedSheet/reconnectPreparedSheet/setupFromProperties against copied production data.
-
-### 5. Run additive migration
-
-Run migrateV2() manually as active Admin on the backed-up staging copy. It validates all header prefixes before mutation; abort SCHEMA_MISMATCH without repair. Expect 21 modeled tables + preserved auxiliary tabs 12 and 13 = 23 visible tabs. Read back exact schema, records and preserved cells. Status mapping is a material data change and requires rollback snapshot.
-
-### 6. Configure APIs and policy
-
-Enable Advanced Calendar v3 and required Google Calendar/Drive APIs in the linked Cloud project; authorize expanded scopes as owner. Update 09_CONFIG FRONTEND_URL and timezone for staging. Keep RULES_CONFIRMED=NO and legal versions NOT_REVIEWED until a named human reviews current authoritative texts and policy.
-
-### 7. Deploy staging Apps Script
-
-Create a separate staging web-app deployment executing as the authorized owner. If anonymous endpoint exposure is used for Netlify, permit it only with mandatory signed bridge requests; doPost has no unauthenticated action path. Record exact /exec URL and Google deployment settings.
-
-### 8. Configure Netlify staging
-
-Deploy the Git branch to an isolated staging site or controlled branch deploy. Keep publish=public, functions=netlify/functions, no framework build. Set APPS_SCRIPT_WEBAPP_URL, fresh BRIDGE_SECRET, exact ALLOWED_ORIGINS and TOKEN_HASHES_JSON; ALLOW_PILOT_ADMIN=false. Origin must match Apps Script exactly.
-
-### 9. Issue scoped personal credentials
-
-Create users/suppliers and assignments in staging as Admin. Generate random personal credentials outside chat, store only SHA-256 + email + active/expiry in Netlify registry, and provide tokens to each user through an authorized secure channel. Admin web management does not generate tokens or send invitations.
-
-### 10. Adopt legacy evidence deliberately
-
-Map known SO25-2183 and exact folder IDs to reviewed database records before allowing a duplicate create. Do not infer EUDR25-06780 equals KODA SO; do not fuzzy-match folder names. Preserve originals and verify original sharing ACLs before supplier rollout. No automatic legacy-record adoption tool is supplied.
-
-### 11. Complete real QA
-
-Run pending matrix and capture API request IDs, before/after Sheet rows, folder/file hashes, event IDs, screenshots and supplier isolation attempts. Test 17.8 MB PDF under the 25-second proxy timeout; inspect quota/memory failure recovery and export caps. The 40 mock tests do not substitute for these checks.
-
-### 12. Release production incrementally
-
-Only after staging QA, business/legal review and migration verification: take a fresh production backup, revalidate schema/config/ACLs, migrate the real Sheet, deploy matching GAS and Netlify versions through existing GitHub pipeline, rotate any temporary credentials and verify production URLs without public rollout until acceptance.
-
-### 13. Rollback
-
-Restore matching original code, deployment versions, configuration and the pre-migration Sheet snapshot together. Old code may not understand uppercase statuses and new relationships. Do not erase newly uploaded originals or audit history; reconcile post-release records into a retained archive before restoring a snapshot.
-
-## Known limits and release gates
-
-- Distinct personal token login is implemented; Google SSO/OTP/self-service credential issuance is not.
-- Only PDF, PNG, JPG, JSON and GeoJSON evidence is accepted; SO and product image inputs are limited to 3 MiB each. Evidence and processed PDF chunk transfers support up to 25 MiB.
-- Full in-app ZIP source size is capped at 23 MiB; larger case packages require selected exports or a separately implemented asynchronous export path.
-- Plot geometry supports points and single-ring polygons only; holes, MultiPolygon and antimeridian crossing are held for specialist review. Source precision is declared and human-reviewed; it is never fabricated.
-- N-level lineage supports MDF/veneer forest-origin gaps; quantitative wood mixing, allocation and mass-balance validation is not implemented.
-- Assignment operates at order and individual task scope; no independent material/block assignment table. Notifications cover assignments/review/expiry events, without scheduled overdue notices or mentions.
-- Sheet audit is append-only through the app, not tamper-proof against Google Sheet owners. Supplier app scope does not override previously shared Drive ACLs.
-- Ready-for-operator-review is an internal evidence state. Legal baseline, Annex I, production-country benchmarking and source assertions require human review.
-- Repository URL/access, actual Apps Script project access, Netlify deployment permission, target Calendar access and real staging QA remain necessary before release. Do not post secrets in chat.
-
-## Changelog
-
-- **apps_script/Code.gs**: Retained Sheet/storage setup helpers; strict user resolution and expanded append audit. Legacy prepared IDs retained as reference only.
-- **apps_script/Migration.gs**: All-table header preflight, additive columns/new tabs, legacy status mapping, safe review defaults; preserves tabs 12–13.
-- **apps_script/AuthService.gs**: Role/scope checks; user and supplier management, legal settings, login audit.
-- **apps_script/OrderService.gs**: SO/material/folder creation, preview confirmation, parent graph, assignment, operation journal, notifications.
-- **apps_script/DocumentService.gs**: MIME/signature checks, original preservation, document versions, comments, reviewer workflow, original-only processed lineage and human verification.
-- **apps_script/CalendarService.gs**: Deterministic Calendar v3 event identity and updates, 7/3/1 reminders, permission error handling, completion history.
-- **apps_script/GeoService.gs**: Bounded geometry validation, plot lineage and human review, source evidence gates.
-- **apps_script/PromptService.gs**: Manual no-API prompts, exact structured import validation, prompt version history.
-- **apps_script/MetadataService.gs**: Cited material fields, human scope review, versioned country risk, FSC validity/renewal metadata.
-- **apps_script/ExportService.gs**: Approved-active package selection, manifest/index CSV, history Admin gate, server-authorized download.
-- **apps_script/TransferService.gs**: Durable actor-bound uploads, chunk integrity, source checksum and bounded Google Drive downloads.
-- **apps_script/WorkspaceService.gs**: Scoped bootstrap including supplier material-level chain/GEO isolation, readiness exceptions and controlled internal case closure.
-- **apps_script/Bridge.gs**: Uniform response, signed actor, origin checks, HMAC freshness, nonce replay prevention, action allowlist.
-- **apps_script/appsscript.json**: Calendar advanced service and server-side external-request scope.
-- **netlify/functions/call.mjs**: Preserved Netlify-to-Apps Script bridge; per-user hashed credential registry and uniform errors.
-- **netlify.toml**: Preserved deployment structure; hardened CSP including blob document preview and OSM tiles.
-- **public/app.js**: Existing vanilla JS expanded to order/evidence/review/chain/GEO/calendar/administration workflows; menus reflect allowed roles.
-- **public/index.html / public/style.css**: Responsive work screens and original official KODA logo, without a new framework.
-- **public/koda-logo.png**: Unmodified official Drive brand PNG; SHA-256 recorded in evidence register.
-- **tests/v2.test.mjs / package.json**: 40 focused Node test groups with mocked Google services; executable standalone test command.
-- **.env.example / README_VI.md**: Blank server-secret templates and staged deployment, migration and rollback runbook.
-- Replaced obsolete pilot test scripts with the new test matrix; unchanged originals remain in the backup ZIP.
-
-## UI revision on this staging package
-
-The visual shell, sign-in, dashboard, Orders register, and order summary have been redesigned. The dashboard now gives a real empty state when no order exists, shows action priorities from registered tasks, and separates evidence progress from legal compliance. Orders have immediate search and collapsible advanced filters. Existing backend and Apps Script files are unchanged. This is still a staging candidate; production deployment and real Google-backed UI QA remain pending.
+Môi trường `netlify dev` không thay thế bài test Identity trên Deploy Preview. Gói bao gồm mã nguồn đầy đủ, không có giá trị secret.

@@ -1,0 +1,58 @@
+id,area,scenario,status,evidence_or_blocker
+1,Authentication,Invited active ADMIN logs in,NOT_RUN_STAGING,Identity not configured on staging
+2,Authentication,Active MARKETING logs in,NOT_RUN_STAGING,Identity not configured on staging
+3,Authentication,EUDR_REVIEWER permissions remain correct,NOT_RUN_STAGING,Needs invited account and staging backend
+4,Authentication,VIEWER remains read-only,NOT_RUN_STAGING,Needs invited account and staging backend
+5,Authentication,SUPPLIER_USER cannot view unrelated orders,NOT_RUN_STAGING,Needs separate supplier accounts and staging data
+6,Authentication,Inactive owner denied,NOT_RUN_STAGING,Backend checks active YES; live test pending
+7,Authentication,Unknown Identity user denied,NOT_RUN_STAGING,Backend checks owner directory; live test pending
+8,Authentication,Logout works,NOT_RUN_STAGING,Identity session test pending
+9,Authentication,Expired session returns to login,NOT_RUN_STAGING,Identity session test pending
+10,Authentication,Password recovery works,NOT_RUN_STAGING,Identity email/callback test pending
+11,Authentication,Invitation flow works,NOT_RUN_STAGING,Identity email/callback test pending
+12,Authentication,Legacy token path disabled after migration,PASS_LOCAL,New Function has no token registry; production cutover pending
+13,Language,English primary pages render,NOT_RUN_STAGING,Manual UI test pending
+14,Language,Vietnamese primary pages render,NOT_RUN_STAGING,Manual UI test pending
+15,Language,Language persists after refresh,NOT_RUN_STAGING,Manual UI test pending
+16,Language,Backend enums remain unchanged,PASS_LOCAL,Translations are display-only in src/i18n.js
+17,Language,Errors translated correctly,NOT_RUN_STAGING,Error code map implemented; manual test pending
+18,Create Order,Normal order creation,NOT_RUN_STAGING,Requires backend staging
+19,Create Order,Duplicate order,NOT_RUN_STAGING,Requires backend staging
+20,Create Order,Invalid PDF,NOT_RUN_STAGING,Requires backend staging
+21,Create Order,Oversized input,NOT_RUN_STAGING,Requires backend staging
+22,Create Order,Backend timeout,NOT_RUN_STAGING,Requires backend staging
+23,Create Order,Retry with same request key,NOT_RUN_STAGING,Existing operation ledger retained; live test pending
+24,Create Order,Success screen appears,NOT_RUN_STAGING,Manual UI test pending
+25,Create Order,Open Workspace works,NOT_RUN_STAGING,Manual UI test pending
+26,Create Order,Upload More Documents routes correctly,NOT_RUN_STAGING,Manual UI test pending
+27,Create Order,Create Another Order resets form,NOT_RUN_STAGING,Manual UI test pending
+28,Create Order,Double-click cannot create duplicate,NOT_RUN_STAGING,Manual UI test pending
+29,AI Assistant,Prompt contains exact SO,PASS_LOCAL,Prompt unit test
+30,AI Assistant,Prompt contains case ID,PASS_LOCAL,Prompt unit test
+31,AI Assistant,Prompt contains source filename,PASS_LOCAL,Prompt unit test
+32,AI Assistant,Prompt contains source file link,PASS_LOCAL,Prompt unit test
+33,AI Assistant,Prompt contains order folder link,PASS_LOCAL,Prompt unit test
+34,AI Assistant,Prompt contains source Sheet,PASS_LOCAL,Prompt unit test
+35,AI Assistant,Prompt contains target tab,PASS_LOCAL,Prompt unit test
+36,AI Assistant,Prompt contains action mode,PASS_LOCAL,Prompt unit test
+37,AI Assistant,Prompt contains human review boundary,PASS_LOCAL,Prompt unit test
+38,AI Assistant,Missing source produces explicit error,PASS_LOCAL,Prompt unit test
+39,AI Assistant,Prompt does not invent Drive URL,PASS_LOCAL,Drive ID comes from verified registered file; live test pending
+40,AI Assistant,Prompt does not expose credentials,PASS_LOCAL,Prompt context contains IDs and no secret fields
+41,Governance,AI cannot mark evidence approved by itself,NOT_RUN_STAGING,Existing review controls retained; live test pending
+42,Governance,Low-risk country does not produce compliance badge,PASS_LOCAL,No compliance badge added
+43,Governance,Missing scientific species remains null/not found,NOT_RUN_STAGING,Prompt rule implemented; human review pending
+44,Governance,Conflicting documents remain flagged,NOT_RUN_STAGING,Prompt rule implemented; human review pending
+45,Governance,Original evidence remains preserved,NOT_RUN_STAGING,Existing document versioning retained; live test pending
+46,Governance,Audit records actor and action,NOT_RUN_STAGING,Server signs verified email; live log test pending
+47,Governance,Legal rule freshness warning works,NOT_RUN_STAGING,Existing legalState retained; live UI test pending
+S01,Security,XSS and malicious filenames,NOT_RUN_STAGING,Manual security QA pending
+S02,Security,Prompt injection in uploaded PDF,NOT_RUN_STAGING,Manual security QA pending
+S03,Security,Altered case IDs and cross-order access,NOT_RUN_STAGING,Manual security QA pending
+S04,Security,Supplier isolation,NOT_RUN_STAGING,Manual security QA pending
+S05,Security,Replayed request and conflicting request key,NOT_RUN_STAGING,Existing bridge and operation ledger retained; live test pending
+S06,Security,Forged frontend role and email,PASS_LOCAL,Netlify actor signing unit test
+S07,Security,Missing Origin,PASS_LOCAL,Netlify origin unit test
+S08,Security,Invalid bridge signature,NOT_RUN_STAGING,Existing bridge HMAC retained; live test pending
+S09,Security,Expired Identity session,NOT_RUN_STAGING,Live Netlify test pending
+S10,Security,Secret exposure and direct Apps Script invocation,NOT_RUN_STAGING,Deployment configuration and direct endpoint test pending
