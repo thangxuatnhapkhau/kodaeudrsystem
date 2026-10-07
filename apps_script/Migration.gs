@@ -28,7 +28,7 @@ function migrateV2(){
  if(!admin)throw Error('PERMISSION_DENIED: deploying account must already be Admin');
  return lock_(()=>{
   // Validate EVERY header before ANY mutation. Never repair by destructive rewrite.
-  const plans=Object.keys(SCHEMA).map(n=>{const sheet=db.getSheetByName(n),expected=SCHEMA[n];
+  const plans=Object.keys(V22_BASE_).map(n=>{const sheet=db.getSheetByName(n),expected=V22_BASE_[n];
    if(!sheet){if(!V2_TABLES_[n])throw Error('SCHEMA_MISMATCH: '+n);return {n,expected,create:true};}
    const actual=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
    if(actual.some((h,i)=>h!==expected[i])||actual.length>expected.length)throw Error('SCHEMA_MISMATCH: '+n);
@@ -53,7 +53,7 @@ function migrateV21(){
  const sheet=db.getSheetByName('05_OWNER_MASTER');if(!sheet)throw Error('SCHEMA_MISMATCH: 05_OWNER_MASTER missing');
  const ownerSheet=db.getSheetByName('05_OWNER_MASTER'),values=ownerSheet.getDataRange().getValues();
  if(!values.slice(1).some(r=>String(r[0]).toLowerCase()===email&&r[3]==='ADMIN'&&r[4]==='YES'))throw Error('PERMISSION_DENIED: deploying account must already be Admin');
- const expected=SCHEMA['05_OWNER_MASTER'],actual=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+ const expected=V22_BASE_['05_OWNER_MASTER'],actual=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
  if(actual.some((h,i)=>h!==expected[i])||actual.length<expected.length-4||actual.length>expected.length)throw Error('SCHEMA_MISMATCH: 05_OWNER_MASTER');
  // No row is rewritten; the existing authorization fields and last_login stay intact.
  return lock_(()=>{const current=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
@@ -65,3 +65,44 @@ function migrateV21(){
   return {version:'2.1.0',added:expected.length-current.length};
  });
 }
+
+
+// V2.2: immutable relationships; expected V2.1 headers are frozen before extension.
+const V22_BASE_=JSON.parse(JSON.stringify(SCHEMA));
+const V22_COLUMNS_={
+ '01_SO_MASTER':['creation_state'],
+ '02_SO_ITEM_MATERIAL':['product_ids','updated_at','updated_by'],
+ '03_EVIDENCE_REQUIREMENT':['required','node_type','rule_version','effective_date','updated_by','updated_at','policy_id'],
+ '04_EVIDENCE_TRACKER':['chain_node_id','requirement_id','rule_version','submitted_at'],
+ '05_OWNER_MASTER':['capabilities'],
+ '06_DOCUMENT_REGISTER':['chain_node_id','product_id','ai_output_type','file_size_bytes','sha256','submitted_at','prompt_run_id','validation_report'],
+ '07_AI_REVIEW_QUEUE':['material_id','chain_node_id','comparison_document_id','ai_function','field','observed_value','expected_or_comparison_value','source_page','evidence_excerpt','reason','check_status','severity','reviewer_decision','reviewer_comment','created_at','reviewed_at','prompt_run_id'],
+ '14_SUPPLIERS':['supplier_code','address','country','contact_person','phone','registration','updated_at','updated_by'],
+ '15_SUPPLY_CHAIN':['tier','relationship','terminal','folder','status','display_name','updated_at','updated_by'],
+ '18_AI_PROMPT_RUNS':['source_document_ids','result_sha256'],
+ '19_EXPORT_LOG':['document_ids']
+};
+Object.keys(V22_COLUMNS_).forEach(n=>SCHEMA[n]=SCHEMA[n].concat(V22_COLUMNS_[n]));
+SCHEMA['24_SO_PRODUCTS']=['id','case_id','sku','product_name','quantity','quantity_uom','image_document_id','sequence','active','created_at','created_by','updated_at','updated_by'];
+function migrationV22Plan_(){
+ const db=db_();return Object.keys(SCHEMA).map(n=>{
+  const s=db.getSheetByName(n),expected=SCHEMA[n],base=V22_BASE_[n];
+  if(!s){if(n!=='24_SO_PRODUCTS')fail_('SCHEMA_MISMATCH','Missing '+n);return {name:n,create:true,add:expected};}
+  const actual=s.getRange(1,1,1,s.getLastColumn()).getValues()[0];
+  if(actual.length<(base?base.length:expected.length)||actual.length>expected.length||actual.some((h,i)=>h!==expected[i]))fail_('SCHEMA_MISMATCH','Unexpected header '+n);
+  return {name:n,create:false,start:actual.length,add:expected.slice(actual.length)};
+ });
+}
+function migrateV22(dryRun){
+ const email=Session.getEffectiveUser().getEmail().toLowerCase();
+ if(!rows_('05_OWNER_MASTER').some(u=>u.email===email&&u.role==='ADMIN'&&u.active==='YES'))fail_('PERMISSION_DENIED','Existing deploying Admin required');
+ // Editor-only action. Production execution requires the release approval process.
+ return lock_(()=>{const plan=migrationV22Plan_();if(dryRun!==false)return {version:'2.2.0',dry_run:true,plan};
+  let products=0;plan.forEach(p=>{const s=db_().getSheetByName(p.name)||db_().insertSheet(p.name),expected=SCHEMA[p.name];if(s.getMaxColumns()<expected.length)s.insertColumnsAfter(s.getMaxColumns(),expected.length-s.getMaxColumns());if(p.add.length)s.getRange(1,(p.start||0)+1,1,p.add.length).setValues([p.add]);s.setFrozenRows(1);});
+  rows_('01_SO_MASTER').forEach(c=>{const existing=rows_('24_SO_PRODUCTS').filter(p=>p.case_id===c.id);if(existing.length)return;const id=stable_('legacy-product:'+c.id);add_('24_SO_PRODUCTS',{id,case_id:c.id,product_name:c.product||'',image_document_id:c.product_image_id||'',sequence:1,active:'YES',created_at:c.created_at||now_(),created_by:email,updated_at:now_(),updated_by:email});products++;});
+  // No implicit capability grants, approvals, folder moves, legal confirmations or status conversions.
+  const columns=plan.reduce((n,p)=>n+p.add.length,0);if(columns||products)audit_('SCHEMA_MIGRATED','','','',JSON.stringify({version:'2.2.0',columns,products}),email);
+  return {version:'2.2.0',dry_run:false,columns,products,plan};
+ });
+}
+

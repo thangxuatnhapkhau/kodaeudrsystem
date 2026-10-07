@@ -1,0 +1,5 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> koda-eudr-workspace@2.2.0-staging-candidate check
+> node --check public/app.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs
+

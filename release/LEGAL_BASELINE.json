@@ -1,0 +1,17 @@
+{
+  "prepared_at": "2026-10-07",
+  "status": "HUMAN_LEGAL_REVIEW_REQUIRED",
+  "RULES_CONFIRMED": "NO",
+  "LEGAL_REVIEWED_BY": "",
+  "LAST_LEGAL_REVIEW_DATE": "",
+  "configuration_written_to_production": false,
+  "references": [
+    {"subject":"Regulation (EU) 2023/1115","version":"Current version advertised by EUR-Lex: 2026-09-18","url":"https://eur-lex.europa.eu/eli/reg/2023/1115/oj/eng","full_text_url":"https://eur-lex.europa.eu/eli/reg/2023/1115/2026-09-18/eng","retrieval":"Official metadata located; consolidated full text returned anti-bot page. Full legal review remains pending."},
+    {"subject":"Annex I amendment","version":"Commission Delegated Regulation (EU) 2026/2102, OJ 17 September 2026","url":"https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj/eng","retrieval":"Official metadata/search excerpts located; full English text retrieval blocked. Do not use broad ex-9401 wording as a permanent rule: amendment narrows seating codes; exact current CN mapping must be reviewed."},
+    {"subject":"Commission Guidance","version":"C/2026/3896, 20 July 2026","url":"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:C_202603896","retrieval":"Current official Guidance identified; full document access was blocked. Do not substitute the older 2025 Guidance without review."},
+    {"subject":"Commission FAQ","version":"Version 5, April 2026; publication page dated 21 August 2026","url":"https://environment.ec.europa.eu/publications/faq-eudr-implementation_en","document_url":"https://environment.ec.europa.eu/document/download/744919a7-8650-4850-89ad-a597268cd69e_en?filename=FAQ-UPDATE-5th-Iteration+FINAL.pdf","retrieval":"95-page official PDF retrieved. FAQ is non-binding and predates the September Annex amendment."},
+    {"subject":"Country benchmarking","version":"Commission Implementing Regulation (EU) 2025/1093","url":"https://eur-lex.europa.eu/eli/reg_impl/2025/1093/oj/eng","retrieval":"Official act identified; full English annex was blocked. User-provided Vietnam LOW RISK classification has not been independently confirmed from the full annex in this execution. No country risk record was auto-approved."},
+    {"subject":"Application dates","url":"https://environment.ec.europa.eu/topics/forests/deforestation/regulation-deforestation-free-products_en","retrieval":"Official page retrieved: large/medium operators 30 December 2026; micro/small 30 June 2027; micro/small already covered by EUTR 30 December 2026. It also states newly added products under 2026/2102 apply from 30 December 2027. Human must select the applicable category/product rule."}
+  ],
+  "configuration_policy":"Versions remain configurable in existing 09_CONFIG. Only an authorized human may confirm the legal baseline. Search metadata is not a substitute for complete applicable legal-text review; subsequent amendments must be checked at deployment."
+}

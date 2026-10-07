@@ -1,0 +1,590 @@
+{
+  "scope": "Synthetic in-memory simulation only; not live staging/production",
+  "plan": {
+    "version": "2.2.0",
+    "dry_run": true,
+    "plan": [
+      {
+        "name": "01_SO_MASTER",
+        "create": false,
+        "start": 16,
+        "add": [
+          "creation_state"
+        ]
+      },
+      {
+        "name": "02_SO_ITEM_MATERIAL",
+        "create": false,
+        "start": 31,
+        "add": [
+          "product_ids",
+          "updated_at",
+          "updated_by"
+        ]
+      },
+      {
+        "name": "03_EVIDENCE_REQUIREMENT",
+        "create": false,
+        "start": 6,
+        "add": [
+          "required",
+          "node_type",
+          "rule_version",
+          "effective_date",
+          "updated_by",
+          "updated_at",
+          "policy_id"
+        ]
+      },
+      {
+        "name": "04_EVIDENCE_TRACKER",
+        "create": false,
+        "start": 19,
+        "add": [
+          "chain_node_id",
+          "requirement_id",
+          "rule_version",
+          "submitted_at"
+        ]
+      },
+      {
+        "name": "05_OWNER_MASTER",
+        "create": false,
+        "start": 14,
+        "add": [
+          "capabilities"
+        ]
+      },
+      {
+        "name": "06_DOCUMENT_REGISTER",
+        "create": false,
+        "start": 30,
+        "add": [
+          "chain_node_id",
+          "product_id",
+          "ai_output_type",
+          "file_size_bytes",
+          "sha256",
+          "submitted_at",
+          "prompt_run_id",
+          "validation_report"
+        ]
+      },
+      {
+        "name": "07_AI_REVIEW_QUEUE",
+        "create": false,
+        "start": 6,
+        "add": [
+          "material_id",
+          "chain_node_id",
+          "comparison_document_id",
+          "ai_function",
+          "field",
+          "observed_value",
+          "expected_or_comparison_value",
+          "source_page",
+          "evidence_excerpt",
+          "reason",
+          "check_status",
+          "severity",
+          "reviewer_decision",
+          "reviewer_comment",
+          "created_at",
+          "reviewed_at",
+          "prompt_run_id"
+        ]
+      },
+      {
+        "name": "08_ACTIVITY_LOG",
+        "create": false,
+        "start": 12,
+        "add": []
+      },
+      {
+        "name": "09_CONFIG",
+        "create": false,
+        "start": 2,
+        "add": []
+      },
+      {
+        "name": "10_INTEGRATION_LOG",
+        "create": false,
+        "start": 6,
+        "add": []
+      },
+      {
+        "name": "11_INTEGRATION_ERROR",
+        "create": false,
+        "start": 4,
+        "add": []
+      },
+      {
+        "name": "14_SUPPLIERS",
+        "create": false,
+        "start": 6,
+        "add": [
+          "supplier_code",
+          "address",
+          "country",
+          "contact_person",
+          "phone",
+          "registration",
+          "updated_at",
+          "updated_by"
+        ]
+      },
+      {
+        "name": "15_SUPPLY_CHAIN",
+        "create": false,
+        "start": 10,
+        "add": [
+          "tier",
+          "relationship",
+          "terminal",
+          "folder",
+          "status",
+          "display_name",
+          "updated_at",
+          "updated_by"
+        ]
+      },
+      {
+        "name": "16_COMMENTS",
+        "create": false,
+        "start": 8,
+        "add": []
+      },
+      {
+        "name": "17_GEO_LOCATIONS",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "18_AI_PROMPT_RUNS",
+        "create": false,
+        "start": 10,
+        "add": [
+          "source_document_ids",
+          "result_sha256"
+        ]
+      },
+      {
+        "name": "19_EXPORT_LOG",
+        "create": false,
+        "start": 8,
+        "add": [
+          "document_ids"
+        ]
+      },
+      {
+        "name": "20_NOTIFICATIONS",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "23_UPLOAD_SESSIONS",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "22_COUNTRY_RISK",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "21_OPERATIONS",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "24_SO_PRODUCTS",
+        "create": true,
+        "add": [
+          "id",
+          "case_id",
+          "sku",
+          "product_name",
+          "quantity",
+          "quantity_uom",
+          "image_document_id",
+          "sequence",
+          "active",
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by"
+        ]
+      }
+    ]
+  },
+  "first": {
+    "version": "2.2.0",
+    "dry_run": false,
+    "columns": 73,
+    "products": 2,
+    "plan": [
+      {
+        "name": "01_SO_MASTER",
+        "create": false,
+        "start": 16,
+        "add": [
+          "creation_state"
+        ]
+      },
+      {
+        "name": "02_SO_ITEM_MATERIAL",
+        "create": false,
+        "start": 31,
+        "add": [
+          "product_ids",
+          "updated_at",
+          "updated_by"
+        ]
+      },
+      {
+        "name": "03_EVIDENCE_REQUIREMENT",
+        "create": false,
+        "start": 6,
+        "add": [
+          "required",
+          "node_type",
+          "rule_version",
+          "effective_date",
+          "updated_by",
+          "updated_at",
+          "policy_id"
+        ]
+      },
+      {
+        "name": "04_EVIDENCE_TRACKER",
+        "create": false,
+        "start": 19,
+        "add": [
+          "chain_node_id",
+          "requirement_id",
+          "rule_version",
+          "submitted_at"
+        ]
+      },
+      {
+        "name": "05_OWNER_MASTER",
+        "create": false,
+        "start": 14,
+        "add": [
+          "capabilities"
+        ]
+      },
+      {
+        "name": "06_DOCUMENT_REGISTER",
+        "create": false,
+        "start": 30,
+        "add": [
+          "chain_node_id",
+          "product_id",
+          "ai_output_type",
+          "file_size_bytes",
+          "sha256",
+          "submitted_at",
+          "prompt_run_id",
+          "validation_report"
+        ]
+      },
+      {
+        "name": "07_AI_REVIEW_QUEUE",
+        "create": false,
+        "start": 6,
+        "add": [
+          "material_id",
+          "chain_node_id",
+          "comparison_document_id",
+          "ai_function",
+          "field",
+          "observed_value",
+          "expected_or_comparison_value",
+          "source_page",
+          "evidence_excerpt",
+          "reason",
+          "check_status",
+          "severity",
+          "reviewer_decision",
+          "reviewer_comment",
+          "created_at",
+          "reviewed_at",
+          "prompt_run_id"
+        ]
+      },
+      {
+        "name": "08_ACTIVITY_LOG",
+        "create": false,
+        "start": 12,
+        "add": []
+      },
+      {
+        "name": "09_CONFIG",
+        "create": false,
+        "start": 2,
+        "add": []
+      },
+      {
+        "name": "10_INTEGRATION_LOG",
+        "create": false,
+        "start": 6,
+        "add": []
+      },
+      {
+        "name": "11_INTEGRATION_ERROR",
+        "create": false,
+        "start": 4,
+        "add": []
+      },
+      {
+        "name": "14_SUPPLIERS",
+        "create": false,
+        "start": 6,
+        "add": [
+          "supplier_code",
+          "address",
+          "country",
+          "contact_person",
+          "phone",
+          "registration",
+          "updated_at",
+          "updated_by"
+        ]
+      },
+      {
+        "name": "15_SUPPLY_CHAIN",
+        "create": false,
+        "start": 10,
+        "add": [
+          "tier",
+          "relationship",
+          "terminal",
+          "folder",
+          "status",
+          "display_name",
+          "updated_at",
+          "updated_by"
+        ]
+      },
+      {
+        "name": "16_COMMENTS",
+        "create": false,
+        "start": 8,
+        "add": []
+      },
+      {
+        "name": "17_GEO_LOCATIONS",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "18_AI_PROMPT_RUNS",
+        "create": false,
+        "start": 10,
+        "add": [
+          "source_document_ids",
+          "result_sha256"
+        ]
+      },
+      {
+        "name": "19_EXPORT_LOG",
+        "create": false,
+        "start": 8,
+        "add": [
+          "document_ids"
+        ]
+      },
+      {
+        "name": "20_NOTIFICATIONS",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "23_UPLOAD_SESSIONS",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "22_COUNTRY_RISK",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "21_OPERATIONS",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "24_SO_PRODUCTS",
+        "create": true,
+        "add": [
+          "id",
+          "case_id",
+          "sku",
+          "product_name",
+          "quantity",
+          "quantity_uom",
+          "image_document_id",
+          "sequence",
+          "active",
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by"
+        ]
+      }
+    ]
+  },
+  "second": {
+    "version": "2.2.0",
+    "dry_run": false,
+    "columns": 0,
+    "products": 0,
+    "plan": [
+      {
+        "name": "01_SO_MASTER",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "02_SO_ITEM_MATERIAL",
+        "create": false,
+        "start": 34,
+        "add": []
+      },
+      {
+        "name": "03_EVIDENCE_REQUIREMENT",
+        "create": false,
+        "start": 13,
+        "add": []
+      },
+      {
+        "name": "04_EVIDENCE_TRACKER",
+        "create": false,
+        "start": 23,
+        "add": []
+      },
+      {
+        "name": "05_OWNER_MASTER",
+        "create": false,
+        "start": 15,
+        "add": []
+      },
+      {
+        "name": "06_DOCUMENT_REGISTER",
+        "create": false,
+        "start": 38,
+        "add": []
+      },
+      {
+        "name": "07_AI_REVIEW_QUEUE",
+        "create": false,
+        "start": 23,
+        "add": []
+      },
+      {
+        "name": "08_ACTIVITY_LOG",
+        "create": false,
+        "start": 12,
+        "add": []
+      },
+      {
+        "name": "09_CONFIG",
+        "create": false,
+        "start": 2,
+        "add": []
+      },
+      {
+        "name": "10_INTEGRATION_LOG",
+        "create": false,
+        "start": 6,
+        "add": []
+      },
+      {
+        "name": "11_INTEGRATION_ERROR",
+        "create": false,
+        "start": 4,
+        "add": []
+      },
+      {
+        "name": "14_SUPPLIERS",
+        "create": false,
+        "start": 14,
+        "add": []
+      },
+      {
+        "name": "15_SUPPLY_CHAIN",
+        "create": false,
+        "start": 18,
+        "add": []
+      },
+      {
+        "name": "16_COMMENTS",
+        "create": false,
+        "start": 8,
+        "add": []
+      },
+      {
+        "name": "17_GEO_LOCATIONS",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "18_AI_PROMPT_RUNS",
+        "create": false,
+        "start": 12,
+        "add": []
+      },
+      {
+        "name": "19_EXPORT_LOG",
+        "create": false,
+        "start": 9,
+        "add": []
+      },
+      {
+        "name": "20_NOTIFICATIONS",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "23_UPLOAD_SESSIONS",
+        "create": false,
+        "start": 17,
+        "add": []
+      },
+      {
+        "name": "22_COUNTRY_RISK",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "21_OPERATIONS",
+        "create": false,
+        "start": 7,
+        "add": []
+      },
+      {
+        "name": "24_SO_PRODUCTS",
+        "create": false,
+        "start": 13,
+        "add": []
+      }
+    ]
+  },
+  "production_writes": 0
+}

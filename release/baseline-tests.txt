@@ -1,0 +1,75 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> koda-eudr-workspace@2.1.0-staging test
+> node --test tests/*.test.mjs
+
+✔ verified identities retain revocation checks and unverified email cannot reach the bridge (2.533642ms)
+✔ server credential errors are distinct from expired/revoked/disabled/unverified accounts and never leak raw messages (0.596541ms)
+✔ malformed service-account JSON produces CONFIG status before contacting Apps Script (1.433936ms)
+✔ email verification waits for user action and refreshed verified token before recording login (4.100952ms)
+✔ verified users see a safe configuration error and reference rather than a generic AUTH_REQUIRED (1.446157ms)
+✔ public Firebase config has no service account and auth mutation requires allowed origin (1.550418ms)
+✔ only reviewers of active submitted original evidence get decision controls (8.709995ms)
+✔ approved evidence requires a deliberate change action and source names/notes are escaped (0.742222ms)
+✔ choosing or cancelling a decision does not call the backend (0.906628ms)
+✔ rejection and more-information decisions block empty or whitespace reasons (1.528737ms)
+✔ explicit confirmation records the exact document, decision and trimmed reason once (2.705523ms)
+✔ server rejection preserves the note and confirmation panel and restores buttons (0.916915ms)
+✔ in-flight reviews block repeated confirmation and gate role changes before sending (0.771755ms)
+FIREBASE_AUTH_FAILURE {"requestId":"a7b92a8a-b34e-4020-a7f9-76ecbca4504f","code":"FIREBASE_CONFIG_INVALID"}
+FIREBASE_AUTH_FAILURE {"requestId":"ab4f6ef4-ae72-4a90-8fd3-8dde97d4e953","code":"FIREBASE_CONFIG_INVALID"}
+FIREBASE_AUTH_FAILURE {"requestId":"304fa7bc-1365-4f41-9afd-532a6251d599","code":"FIREBASE_CONFIG_INVALID"}
+✔ closure requires human confirmation, complete traceability, fresh legal review and export (6.662802ms)
+✔ invalid coordinate precision configuration cannot bypass validation (1.76184ms)
+✔ Apps Script files parse and additive schema reuses existing tables (1.669614ms)
+✔ disabled user and disabled supplier are denied immediately (2.160324ms)
+✔ supplier bootstrap and direct document access cannot cross supplier/order scope (2.607702ms)
+✔ supplier chain and plot metadata stay within assigned material even on the same order (1.613607ms)
+✔ supplier cannot manage user, create SO, review, export or use prompt studio (2.113535ms)
+✔ personal assignment owner can see own order evidence without global scope (1.706263ms)
+✔ invalid MIME signature and invalid date do not create Drive folders (2.842358ms)
+✔ order retry reuses folder, file and order; duplicate SO is held (4.659147ms)
+✔ idempotency key cannot be reused with changed args (1.719771ms)
+✔ material preview validates exact order, duplicates, citation and category (2.180408ms)
+✔ material confirmation creates required evidence once and supports retry (2.291196ms)
+✔ document rejection history survives replacement and only one version stays active (3.486018ms)
+✔ internal comments stay internal for supplier document viewer (1.967315ms)
+✔ reviewer acceptance requires submission; supplier cannot bypass with updateTask (2.189796ms)
+✔ calendar retry, reschedule, owner change and completion keep one event and history (1.837846ms)
+✔ calendar permission failure saves task and never uses primary calendar (1.848181ms)
+✔ GEO: valid point/polygon, out of range, malformed, closure, duplicate and intersection (1.671016ms)
+✔ plot >4 ha requires polygon; production country/source chain are required (2.934827ms)
+✔ deep upstream chain is not capped at two tiers and broken chain is flagged (1.746708ms)
+✔ FSC approved without GEO/upstream cannot become operator-ready (1.977223ms)
+✔ redaction/subtitle prompts require human-approved active source; no API calls (2.421929ms)
+✔ processed copies cannot become source evidence or replace original task review (3.609186ms)
+✔ export rejects rejected/inactive docs and unverified processed output (1.940606ms)
+✔ selected export produces manifest once and export download obeys scope (3.330086ms)
+✔ CSV/Sheet injection is neutralized and audit has no public edit endpoint (1.62291ms)
+✔ signed request verifies origin, HMAC, replay and active actor (3.597676ms)
+✔ Legacy tokens work only under explicit rollback flag and retain origin checks (2.197892ms)
+✔ material metadata needs cited source; supplier cannot edit species or legal scope (2.658635ms)
+✔ scientific-name, scope, legality and production-country gaps block operator-ready (1.50953ms)
+✔ country classification records require EU sources and are versioned by production country (2.756205ms)
+✔ legal freshness rejects malformed review dates and missing reviewer (2.012675ms)
+✔ certificate expiry records create one renewal task without counting it as required evidence (5.639949ms)
+✔ migration validates all headers before writing and never touches auxiliary tabs (3.36437ms)
+✔ optimistic version check stops stale evidence upload (1.728015ms)
+✔ chunked upload assembles >3 MiB, verifies checksum and keeps one active document on retry (1148.39611ms)
+✔ chunk upload rejects missing, altered, wrong-size and cross-user chunks (2.425545ms)
+✔ bounded chunk download rechecks permission and refuses whole-file or short responses (2.257956ms)
+✔ all HTTP actions resolve to backend handlers and frontend action calls are supported (1.878086ms)
+✔ Firebase owner binding and first-login gate apply in Apps Script (1.628562ms)
+✔ AI prompt embeds exact authorized workbook, folder, source file and review destination (1.410566ms)
+✔ legal rules cannot be marked confirmed from version labels alone (1.340259ms)
+✔ existing order folder candidates require explicit selection before creation (2.455107ms)
+✔ Firebase identity cannot use an active legacy owner row without UID binding (1.553846ms)
+✔ document review import queues source-backed findings without approval (2.021073ms)
+ℹ tests 59
+ℹ suites 0
+ℹ pass 59
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1465.755055

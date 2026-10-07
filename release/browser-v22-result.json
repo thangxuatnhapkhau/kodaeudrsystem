@@ -1,0 +1,10 @@
+{
+  "status": "BLOCKED",
+  "executed_successfully": false,
+  "reason": "Chromium unavailable; browser installation returned invalid/truncated archive. DOM tests passed, but real rendering/responsiveness remains unverified.",
+  "required_viewports": [
+    "desktop EN",
+    "tablet VI",
+    "mobile VI"
+  ]
+}

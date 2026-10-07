@@ -1,4 +1,4 @@
-const ROLES_=['ADMIN','MARKETING','EUDR_REVIEWER','INTERNAL_USER','SUPPLIER_USER','VIEWER'];
+const ROLES_=['ADMIN','MARKETING','EUDR_REVIEWER','INTERNAL_USER','SUPPLIER_USER','VIEWER','MP','PURCHASING','SOURCING'];
 function fail_(code,message){const e=Error(message);e.code=code;throw e;}
 function requireRole_(roles){const u=user_();if(!roles.includes(u.role))fail_('PERMISSION_DENIED','Role does not allow this action');return u;}
 function assigned_(u,id){try{return JSON.parse(u.assigned_orders||'[]').includes(id);}catch(e){return false;}}
@@ -8,7 +8,7 @@ function order_(id,u){const c=rows_('01_SO_MASTER').find(x=>x.id===id);if(!c)fai
 function task_(id,u){const t=rows_('04_EVIDENCE_TRACKER').find(x=>x.id===id);if(!t||!canTask_(u,t))fail_('PERMISSION_DENIED','Task outside assigned scope');return t;}
 function document_(id,u){const d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===id);if(!d)fail_('FILE_NOT_FOUND','Document not found');
  if(u.role==='SUPPLIER_USER'){const t=rows_('04_EVIDENCE_TRACKER').find(x=>x.id===d.task_id);if(!t||!canTask_(u,t)||d.supplier_id!==u.supplier_id)fail_('PERMISSION_DENIED','Document outside supplier scope');}
- else order_(d.case_id,u);return d;
+ else order_(d.case_id,u);if(!documentVisible_(d,u))fail_('PERMISSION_DENIED','Marketing Sales Order view capability required');return d;
 }
 function requireWrite_(u){if(u.role==='VIEWER')fail_('PERMISSION_DENIED','Read-only user');}
 function manageUser(input){const actor=requireRole_(['ADMIN']);return lock_(()=>{
@@ -21,9 +21,9 @@ function manageUser(input){const actor=requireRole_(['ADMIN']);return lock_(()=>
  if(old)patch_('05_OWNER_MASTER',email,value);else add_('05_OWNER_MASTER',{...value,created_at:now_(),created_by:actor.email});
  audit_('USER_SAVED','','',old?JSON.stringify(old):'',JSON.stringify(value),actor.email);return {email};
  });}
-function manageSupplier(input){const u=requireRole_(['ADMIN']);return lock_(()=>{const id=input.id||stable_('supplier:'+text_(input.name,200).toLowerCase());
- const value={id,name:text_(input.name,200),email:text_(input.email||'',200),active:input.active||'YES'};if(!value.name||!['YES','NO'].includes(value.active))fail_('INVALID_INPUT','Invalid supplier');
- const old=rows_('14_SUPPLIERS').find(s=>s.id===id);if(old)patch_('14_SUPPLIERS',id,value);else add_('14_SUPPLIERS',{...value,created_at:now_(),created_by:u.email});audit_('SUPPLIER_SAVED','',id,old?JSON.stringify(old):'',JSON.stringify(value),u.email);return value;});}
+
+function listSuppliers(query){const u=requireCapability_('SUPPLIER_EDIT'),q=text_(query||'',200).toLowerCase();return rows_('14_SUPPLIERS').filter(s=>[s.name,s.supplier_code].some(v=>String(v||'').toLowerCase().includes(q))).slice(0,100);}
+function manageSupplier(input){const u=requireCapability_('SUPPLIER_EDIT');return withOperation_(()=>{const name=text_(input.name||'',200),code=text_(input.supplier_code||'',100),all=rows_('14_SUPPLIERS'),id=input.id||stable_('supplier:'+u.email+':'+BRIDGE_REQUEST_KEY),old=all.find(s=>s.id===id);if(!name)fail_('INVALID_INPUT','Supplier name required');if(input.id&&!old)fail_('INVALID_INPUT','Supplier missing');const norm=s=>String(s||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();const duplicates=all.filter(s=>s.id!==id&&(norm(s.name)===norm(name)||code&&norm(s.supplier_code)===norm(code)));if(duplicates.length)fail_('HUMAN_MAPPING_REQUIRED','Review existing suppliers: '+duplicates.map(s=>s.id).join(', '));const value={name,supplier_code:code,active:input.active||'YES',updated_at:now_(),updated_by:u.email};if(!['YES','NO'].includes(value.active))fail_('INVALID_INPUT','Invalid active state');for(const k of ['address','country','contact_person','email','phone','registration'])value[k]=text_(input[k]||'',500);if(old)patch_('14_SUPPLIERS',id,value);else add_('14_SUPPLIERS',{...value,id,created_at:now_(),created_by:u.email});auditOnce_('SUPPLIER_SAVED','',id,JSON.stringify(old||{}),JSON.stringify(value),u);return {id};});}
 function saveSettings(input){const u=requireRole_(['ADMIN']);const allowed=['RULES_CONFIRMED','LEGAL_RULE_VERSION','ANNEX_I_VERSION','COUNTRY_RISK_VERSION','LAST_LEGAL_REVIEW_DATE','LEGAL_REVIEWED_BY','LEGAL_REVIEW_MAX_DAYS','LEGAL_RULE_SOURCE_URL','ANNEX_I_SOURCE_URL','COUNTRY_RISK_SOURCE_URL','GEO_MIN_DECIMALS','GEO_POLYGON_THRESHOLD_HA'];return lock_(()=>{
  Object.keys(input).forEach(k=>{if(!allowed.includes(k))fail_('PERMISSION_DENIED','Setting not writable');});
  if(input.LAST_LEGAL_REVIEW_DATE)isoDate_(input.LAST_LEGAL_REVIEW_DATE);if(input.LEGAL_REVIEW_MAX_DAYS&&(!Number.isFinite(Number(input.LEGAL_REVIEW_MAX_DAYS))||Number(input.LEGAL_REVIEW_MAX_DAYS)<=0))fail_('INVALID_INPUT','Review interval must be positive');
@@ -52,3 +52,20 @@ function authAccountStateRecorded(email,enabled){const admin=requireRole_(['ADMI
 function bootstrapFirebaseAdmin(uid){const email=Session.getEffectiveUser().getEmail().trim().toLowerCase(),row=rows_('05_OWNER_MASTER').find(x=>x.email===email&&x.role==='ADMIN'&&x.active==='YES');
  if(!row||row.auth_uid||!/^.{10,128}$/.test(String(uid||'')))throw Error('Bootstrap requires an existing active ADMIN without Firebase UID');
  return lock_(()=>{patch_('05_OWNER_MASTER',email,{auth_provider:'FIREBASE',auth_uid:uid,must_change_password:'NO',password_changed_at:now_()});audit_('AUTH_ACCOUNT_PROVISIONED','','','','Initial Firebase admin bound',email);return {email,uid};});}
+
+
+// Capabilities are evaluated server-side; ADMIN is not an evidence reviewer by default.
+const CAPABILITIES_=['ORDER_EDIT','SO_VIEW','MATERIAL_EDIT','SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','EVIDENCE_REVIEW','POLICY_EDIT','AI_USE','AI_REVIEW','GEO_EDIT','GEO_REVIEW','EXPORT','WORKFLOW_CLOSE'];
+function capabilities_(u){
+ const grants={MARKETING:['ORDER_EDIT','SO_VIEW','EVIDENCE_REVIEW','POLICY_EDIT','AI_USE','AI_REVIEW','GEO_REVIEW','EXPORT','WORKFLOW_CLOSE'],MP:['MATERIAL_EDIT','AI_USE'],PURCHASING:['SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','GEO_EDIT','AI_USE'],SOURCING:['SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','GEO_EDIT','AI_USE'],SUPPLIER_USER:['EVIDENCE_UPLOAD','GEO_EDIT'],EUDR_REVIEWER:['AI_USE'],INTERNAL_USER:[],VIEWER:[],ADMIN:[]};
+ let extra=[];try{extra=JSON.parse(u.capabilities||'[]');}catch(e){}if(!Array.isArray(extra))extra=[];
+ // External users cannot elevate their supplier-isolated access with a capability cell.
+ if(u.role==='SUPPLIER_USER')extra=[];
+ return [...new Set((grants[u.role]||[]).concat(extra.filter(x=>CAPABILITIES_.includes(x))))];
+}
+function hasCapability_(u,cap){return capabilities_(u).includes(cap);}
+function requireCapability_(cap){const u=user_();if(!hasCapability_(u,cap))fail_('PERMISSION_DENIED','Required capability: '+cap);return u;}
+function salesOrderDerived_(d){const seen=new Set();while(d){if(d.kind==='SO'||d.document_type==='Sales order')return true;if(seen.has(d.id))return true;seen.add(d.id);if(!d.source_document_id)return false;d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===d.source_document_id);if(!d)return true;}return false;}
+function documentVisible_(d,u){return !salesOrderDerived_(d)||hasCapability_(u,'SO_VIEW');}
+function grantCapabilities(input){const actor=requireRole_(['ADMIN']);if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Explicit capability assignment required');return withOperation_(()=>{const target=rows_('05_OWNER_MASTER').find(x=>x.email===input.email);if(!target||target.role==='SUPPLIER_USER'||!Array.isArray(input.capabilities)||input.capabilities.some(x=>!CAPABILITIES_.includes(x)))fail_('INVALID_INPUT','Invalid capability assignment');const value=JSON.stringify([...new Set(input.capabilities)]);patch_('05_OWNER_MASTER',target.email,{capabilities:value});audit_('CAPABILITIES_GRANTED','',target.email,target.capabilities||'[]',value,actor.email);return {email:target.email};});}
+

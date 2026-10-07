@@ -1,0 +1,20 @@
+{
+  "source_document_id": "SYNTHETIC-TEST",
+  "source_sha256": "622b2259152c89116536a8dc898c1b4400c4fb1848056d7d75f825e6271643fd",
+  "sha256": "299596bf56f9715d30dbd9790b9a10be059f4201bc9881d9a32bc9d3677af07f",
+  "file_size_bytes": 37411,
+  "page_count": 1,
+  "original_page_count": 1,
+  "mode": "redact",
+  "readability_checked": false,
+  "traceability_preserved": false,
+  "human_verification": "REQUIRED",
+  "text_checked": true,
+  "annotations_checked": true,
+  "forms_checked": true,
+  "metadata_checked": true,
+  "pixels_sanitized": true,
+  "embedded_objects_removed": true,
+  "ocr_checked": true,
+  "note": "OCR checks listed monetary values only; human review must confirm all monetary regions and non-price content."
+}

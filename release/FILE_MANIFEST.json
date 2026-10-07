@@ -1,0 +1,254 @@
+[
+  {
+    "path": "README_V22.md",
+    "sha256": "5f6ddca441c2ae070039286c0d8156e8b6fda644173a270c4254d85ef3631bec",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "apps_script/AuthService.gs",
+    "sha256": "4bb64f911206b468f209b557c20e819a59b052c02e6b09df776c7fd6aec63e40",
+    "source_sha256": "659f239bc56ed8bf223e5d21d5aa23201a02fb736422242e052069391820b8e3",
+    "changed": true
+  },
+  {
+    "path": "apps_script/Bridge.gs",
+    "sha256": "3e9db39afb310a8bad9939760ec24cadb91e4d0b7da7def03e601d86f63eccb4",
+    "source_sha256": "dce839ce5c8995afc0a4a8c72c94e2bb2134d0ab4dfe0263bc43463b17488234",
+    "changed": true
+  },
+  {
+    "path": "apps_script/CalendarService.gs",
+    "sha256": "b15f6157ec3a8348cbf7709c8bca50b6481c14728efdfbc1af53584b5766ece5",
+    "source_sha256": "b15f6157ec3a8348cbf7709c8bca50b6481c14728efdfbc1af53584b5766ece5",
+    "changed": false
+  },
+  {
+    "path": "apps_script/Code.gs",
+    "sha256": "87bab40be28ebeaa448c87f88d625f9d92423c412941d702260881f18ffbac2b",
+    "source_sha256": "8f0e56de1fd9b3a62b05e29db4831bf3c2ddfb90aad0d1fa24ba689f33b0504a",
+    "changed": true
+  },
+  {
+    "path": "apps_script/DocumentService.gs",
+    "sha256": "2ab67f12e014cfdf05e6eeac18383594fdf97dc013363ee60f16d140bb35fd7f",
+    "source_sha256": "6d13fc0eee275bf07614611c62f5ce0723fb0b75972120d2da4abbcb129b09a7",
+    "changed": true
+  },
+  {
+    "path": "apps_script/ExportService.gs",
+    "sha256": "a5e5580c71103d4ca936e91fe47ed175b01972a6a81fdb0eb98fec190dc43ef1",
+    "source_sha256": "b25de00ac4e3013f662ea1a221185c18a5d3b1b010fe5db0c380b68868db621a",
+    "changed": true
+  },
+  {
+    "path": "apps_script/GeoService.gs",
+    "sha256": "d9a18a482d5699aed0b1259a4871267277f7e113088a513362fd878d4acc5c49",
+    "source_sha256": "e982011c06aaccb1654c9625bf31e4d250b74cf478b7554e455371b51612df8e",
+    "changed": true
+  },
+  {
+    "path": "apps_script/MetadataService.gs",
+    "sha256": "5a3e3cd589673f980f3580de21458b21002356ad019791182766c82669f6bb7c",
+    "source_sha256": "fdd3c2993e75bc00e28ffa8580b62b29259d57842f88bb5a932815e8325e7033",
+    "changed": true
+  },
+  {
+    "path": "apps_script/Migration.gs",
+    "sha256": "dde8de3bae1493a0cdd30d4cc77f23b9dfdf15a7a92ee3c4a767106c8b57b9de",
+    "source_sha256": "eb3f3fd43e45e27a611a18043bef0dfe4bc226cfadd19770c20cd03282bbce6c",
+    "changed": true
+  },
+  {
+    "path": "apps_script/OrderService.gs",
+    "sha256": "1ae4d4a1a9d61e25bbf7b75d0780234d1d978c6306c055b698415d6c0cf894bc",
+    "source_sha256": "943672bd70923cf717e53764e58081852f4308862375ac36fe236a1005010000",
+    "changed": true
+  },
+  {
+    "path": "apps_script/PromptService.gs",
+    "sha256": "0c59db808f9d760585b62a3c789b695a0b39b798d7d45b3030f999760f69e2ad",
+    "source_sha256": "4806fa1c5f362c3e965d485ed9e42a418297696b2e8f3d34bdd6f5791d78da02",
+    "changed": true
+  },
+  {
+    "path": "apps_script/TransferService.gs",
+    "sha256": "e20b7144eb6627824e6668221758d18e6fa95526aa9e9e74c9b8dba65ff81a67",
+    "source_sha256": "d017f721298f0c3a5e27fbb60121d4aab8d017bea4d4c08f2630c8673711d3f7",
+    "changed": true
+  },
+  {
+    "path": "apps_script/WorkspaceService.gs",
+    "sha256": "964464e2883cda3d1d39ca7399b6893887cb744945ba8c419db0f70634e7013f",
+    "source_sha256": "edcbc2cbdd81c24d7b90cd2fb03f41fab372f017aacb90398cfbcdca217b725a",
+    "changed": true
+  },
+  {
+    "path": "apps_script/appsscript.json",
+    "sha256": "d9dd54050c059c64ac1900c4d308cb6e23c69b4ecdeb7032e5aff805037bb140",
+    "source_sha256": "d9dd54050c059c64ac1900c4d308cb6e23c69b4ecdeb7032e5aff805037bb140",
+    "changed": false
+  },
+  {
+    "path": "netlify/functions/_bridge.mjs",
+    "sha256": "d8dd369ce5aae776f5db1ae4b01a5d3195fe080dac8f0e5efffdadbe2933ec08",
+    "source_sha256": "d8dd369ce5aae776f5db1ae4b01a5d3195fe080dac8f0e5efffdadbe2933ec08",
+    "changed": false
+  },
+  {
+    "path": "netlify/functions/_firebase.mjs",
+    "sha256": "57c0c9453e6fbb12705f4af2b8b7b9b54d874beea9bc62a7bb13926a243939c3",
+    "source_sha256": "57c0c9453e6fbb12705f4af2b8b7b9b54d874beea9bc62a7bb13926a243939c3",
+    "changed": false
+  },
+  {
+    "path": "netlify/functions/auth.mjs",
+    "sha256": "1a95fef90c57deecf412195ed4187c5c83cfbb582663c1c555f137c9a84c2ec1",
+    "source_sha256": "1a95fef90c57deecf412195ed4187c5c83cfbb582663c1c555f137c9a84c2ec1",
+    "changed": false
+  },
+  {
+    "path": "netlify/functions/call.mjs",
+    "sha256": "60e9e9895e41c59fb7afbfbecdb961578aa25e9778a8cfc995acec797d06d925",
+    "source_sha256": "ad792fca3666c23f0f1fb13024d3bda76d7e4ea5b01ac2a1128cf59b166deb7c",
+    "changed": true
+  },
+  {
+    "path": "netlify.toml",
+    "sha256": "f007b8b75b2df9c45438e26ce95f25b92cd0ca120e36cfe208a4bc59accc4283",
+    "source_sha256": "f007b8b75b2df9c45438e26ce95f25b92cd0ca120e36cfe208a4bc59accc4283",
+    "changed": false
+  },
+  {
+    "path": "package-lock.json",
+    "sha256": "aea17bc1a551c19d467b858d885502b9f0fa28b20cffe1dfe46cd97861d834a4",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "package.json",
+    "sha256": "abf20dad2af28a6de7d4599d5a735766d57b83dd41c5bd4487a8e28468c2c7b5",
+    "source_sha256": "64af9c9c66a102800f446313c67acd261e8f31756c634214ee5ac95cc688bfab",
+    "changed": true
+  },
+  {
+    "path": "public/app.js",
+    "sha256": "e9106e72177a7c43b60de01a3c908bf13bc38ac9b2b8c652a4c2f982cf6dd572",
+    "source_sha256": "518f82f7c0e7bca6f65cf965f9cd6dc89ff0266500dfca061a43ab80245a7f3d",
+    "changed": true
+  },
+  {
+    "path": "public/eudr-workspace-icon.png",
+    "sha256": "8dc9dd0f8f277f560079de307bb7f6dc3776a430f01f30f88d276de892a83f52",
+    "source_sha256": "8dc9dd0f8f277f560079de307bb7f6dc3776a430f01f30f88d276de892a83f52",
+    "changed": false
+  },
+  {
+    "path": "public/i18n.js",
+    "sha256": "b582060211072fc25412a70af069ab1a2eeff275db7eccf31a84c1b8c22a9662",
+    "source_sha256": "c9d77ed30011cdc21fce1e3fb73deca9bd5e2e8c169ea1bafcc55567b66ae18b",
+    "changed": true
+  },
+  {
+    "path": "public/index.html",
+    "sha256": "ba779f5b6ecc8940cc3565e9c188cd9b51bda3b2b1140740bff550564494e6ee",
+    "source_sha256": "9167ef15915712bd45e3cbbe48e12decc7e35fe48e1e0c2223be8eb9d9cf28a2",
+    "changed": true
+  },
+  {
+    "path": "public/koda-logo.png",
+    "sha256": "b3445c1276e3f69713e72e34bd0319cf1cf315baab38f08a8caf2d672d0e5d6d",
+    "source_sha256": "b3445c1276e3f69713e72e34bd0319cf1cf315baab38f08a8caf2d672d0e5d6d",
+    "changed": false
+  },
+  {
+    "path": "public/style.css",
+    "sha256": "03272e49714eadbbd565e3b4ed47856078de5f5d2cf482ae6582e3be6dc388d0",
+    "source_sha256": "681ccdd3f2b50469bb61623da24e52032da8a0119f70fc2d3934dcc8e9189385",
+    "changed": true
+  },
+  {
+    "path": "tests/auth-hotfix.test.mjs",
+    "sha256": "5013097d341d50a9de265053978d17d04d6b7ded9836450213876e3333aa34b7",
+    "source_sha256": "5013097d341d50a9de265053978d17d04d6b7ded9836450213876e3333aa34b7",
+    "changed": false
+  },
+  {
+    "path": "tests/auth.test.mjs",
+    "sha256": "fa76fd18c04c3a6fc515af8900b8950ec527ca14567545ccc4f8381f9d25bb8e",
+    "source_sha256": "fa76fd18c04c3a6fc515af8900b8950ec527ca14567545ccc4f8381f9d25bb8e",
+    "changed": false
+  },
+  {
+    "path": "tests/browser-v22.mjs",
+    "sha256": "ce5a08c88330cf80a1071d739eb6ff63d0ade841e9159e431545f3b5eefdb183",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tests/document-review.test.mjs",
+    "sha256": "46860411e7e73cf41cebaa68123753e84fba1b63c49361c724c77062c6823d39",
+    "source_sha256": "46860411e7e73cf41cebaa68123753e84fba1b63c49361c724c77062c6823d39",
+    "changed": false
+  },
+  {
+    "path": "tests/fixtures/baseline-schema.json",
+    "sha256": "1c7f16709363286dc4affb31b23b4612f97634077de5b8f30273d6c7273ec894",
+    "source_sha256": "1c7f16709363286dc4affb31b23b4612f97634077de5b8f30273d6c7273ec894",
+    "changed": false
+  },
+  {
+    "path": "tests/fixtures/historical-v21-browser-qa-result.json",
+    "sha256": "d09aa0deeea05b1d950aad028c5af0d0f8b0bee04cf298c74c136111aea94f44",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tests/fixtures/live-headers-2026-10-07.json",
+    "sha256": "cfe7ecc7763ca43b769770e12a19a77a14e7fdfc62ef6a29c21b91407eb53293",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tests/runtime.mjs",
+    "sha256": "b0283957eedc8c52f0ebabc85f03dafc43838680fb845db663e30e79b4ed0faa",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tests/test_derived_pdf.py",
+    "sha256": "9a5be2b61c926eacf71105eb998cdfe0df8a24f3fb875063c813701557db5291",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tests/ui-dom.test.mjs",
+    "sha256": "460b1a063a3856a83fc40f68e57d2cce3a21ea0552af55005df45131b92a6c2e",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tests/v2.test.mjs",
+    "sha256": "421d37a92a1ebff0e61d8311b345c8182ef1e71240686fdcef1b1b8e676c6c7e",
+    "source_sha256": "96e57ee42c5ca65fffa04a8a5e0ac454967a79dee1f3794f13c5fdd9c07d5faf",
+    "changed": true
+  },
+  {
+    "path": "tests/v22.test.mjs",
+    "sha256": "12b07e2d58ce68fbac70c865c507c8b347f1c928535cfc3f16b9dc71b259dc86",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tools/derived_pdf.py",
+    "sha256": "18c38a5bdb46c0218b4055906f52e7339d2d0c8d5504a25a6de83db3045c0b01",
+    "source_sha256": null,
+    "changed": true
+  },
+  {
+    "path": "tools/requirements.txt",
+    "sha256": "7a140465cec9a471d2cec18a6c266b7ac199d26f37e3b542a0b23d81f096fc9c",
+    "source_sha256": null,
+    "changed": true
+  }
+]

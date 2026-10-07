@@ -71,10 +71,11 @@ function setup(config){
 }
 function doGet(){return HtmlService.createHtmlOutput('KODA EUDR WORKSPACE API. Open the Netlify site to use the workspace.').setTitle('KODA EUDR WORKSPACE');}
 function db_(){const id=PropertiesService.getScriptProperties().getProperty('DB_ID');if(!id)throw Error('Run setup first');return SpreadsheetApp.openById(id);}
-function rows_(n){const v=db_().getSheetByName(n).getDataRange().getValues(),h=v.shift();return v.filter(r=>r[0]).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i] instanceof Date?r[i].toISOString():r[i]])));}
+var TABLE_CACHE_={};
+function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));const v=db_().getSheetByName(n).getDataRange().getValues(),h=v.shift();const result=v.filter(r=>r[0]).map(r=>Object.fromEntries(h.filter(Boolean).map((k,i)=>[k,r[i] instanceof Date?r[i].toISOString():r[i]])));TABLE_CACHE_[n]=result;return result.map(x=>({...x}));}
 function safe_(v){return typeof v==='string' && /^[=+@\-]/.test(v)?"'"+v:v;}
-function add_(n,o){db_().getSheetByName(n).appendRow(SCHEMA[n].map(k=>safe_(o[k]===undefined?'':o[k])));}
-function patch_(n,id,o){const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');Object.keys(o).forEach(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');s.getRange(i+1,col+1).setValue(safe_(o[k]));});}
+function add_(n,o){delete TABLE_CACHE_[n];db_().getSheetByName(n).appendRow(SCHEMA[n].map(k=>safe_(o[k]===undefined?'':o[k])));}
+function patch_(n,id,o){delete TABLE_CACHE_[n];const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');Object.keys(o).forEach(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');s.getRange(i+1,col+1).setValue(safe_(o[k]));});}
 function uid_(){return Utilities.getUuid();}
 function now_(){return new Date().toISOString();}
 function user_(){
@@ -89,7 +90,7 @@ function user_(){
  return u;
 }
 function manager_(u){return ['ADMIN','MARKETING'].includes(u.role);}
-function requireManager_(){return requireRole_(['ADMIN','MARKETING']);}
+function requireManager_(){return requireCapability_('ORDER_EDIT');}
 function lock_(fn){const l=LockService.getScriptLock();l.waitLock(20000);try{return fn();}finally{l.releaseLock();}}
 function audit_(action,c,e,previous,next,actor){const email=actor||BRIDGE_ACTOR||Session.getEffectiveUser().getEmail(),u=rows_('05_OWNER_MASTER').find(x=>x.email===email),order=c&&rows_('01_SO_MASTER').find(x=>x.id===c);let comment='';try{comment=JSON.parse(next||'{}').comment||'';}catch(ignore){}add_('08_ACTIVITY_LOG',{id:uid_(),timestamp:now_(),actor:email,role:u?u.role:'SYSTEM',action,object_type:action.split('_')[0],case_id:c,order_no:order?order.so:'',entity_id:e,previous,next,comment});}
 function config_(k){return (rows_('09_CONFIG').find(x=>x.key===k)||{}).value;}
