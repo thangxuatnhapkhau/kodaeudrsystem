@@ -1,6 +1,8 @@
 // Display labels only. Backend enums, evidence, IDs and user-entered values stay canonical.
 const translations={
  en:{
+  APPROVED:'Approved internally',REJECTED:'Rejected',MORE_INFO_REQUIRED:'More information needed',IN_REVIEW:'In review',SUBMITTED:'Submitted',UPLOADED:'Uploaded',MISSING:'Missing',
+  VERSION_CONFLICT:'The document or data changed. Reopen the document and review its active version.',
   AUTH_EMAIL_UNVERIFIED:'Verify your email before signing in.',
   AUTH_TOKEN_EXPIRED:'Your session expired. Sign in again.',
   AUTH_TOKEN_REVOKED:'Your session was revoked. Sign in again.',
@@ -11,6 +13,26 @@ const translations={
   FIREBASE_UNAVAILABLE:'Firebase verification is temporarily unavailable. Try again.'
  },
  vi:{
+  'Human review':'Người phụ trách rà soát','Review decision':'Quyết định duyệt chứng từ','File actions':'Thao tác tệp',
+  VERSION_CONFLICT:'Chứng từ hoặc dữ liệu đã thay đổi. Mở lại chứng từ và rà soát phiên bản hiện hành.',
+  'Approve evidence':'Phê duyệt chứng từ','Reject evidence':'Từ chối chứng từ','Request more information':'Yêu cầu bổ sung','Mark as in review':'Bắt đầu rà soát',
+  'Confirm approval':'Xác nhận phê duyệt','Confirm rejection':'Xác nhận từ chối','Confirm information request':'Xác nhận yêu cầu bổ sung','Confirm review started':'Xác nhận bắt đầu rà soát',
+  'Change review decision':'Đổi quyết định duyệt','Back':'Quay lại','Active version':'Phiên bản hiện hành','Previous version':'Phiên bản cũ',
+  'Evidence approval records an internal review. It does not confirm EUDR compliance.':'Phê duyệt này ghi nhận rà soát chứng từ nội bộ; không xác nhận tuân thủ EUDR.',
+  'Last reviewed by':'Người rà soát gần nhất','Reason / required changes (required)':'Lý do / nội dung cần sửa (bắt buộc)','Review note (optional)':'Ghi chú rà soát (không bắt buộc)',
+  'Decision notes are shared with the supplier and saved in the audit trail.':'Ghi chú quyết định được chia sẻ với nhà cung cấp và lưu trong nhật ký.',
+  'Specify the missing information and what the supplier should provide.':'Nêu thông tin còn thiếu và nội dung nhà cung cấp cần bổ sung.',
+  'Explain why this version cannot be accepted.':'Nêu lý do phiên bản này chưa được chấp nhận.',
+  'Record the checks completed or any relevant observations.':'Ghi các nội dung đã kiểm tra hoặc nhận xét liên quan.',
+  'Enter a reason before confirming this decision.':'Nhập lý do trước khi xác nhận quyết định này.','Review decision saved.':'Đã lưu quyết định duyệt chứng từ.',
+  'This is a previous version. Review the active version to make a decision.':'Đây là phiên bản cũ. Mở phiên bản hiện hành để đưa ra quyết định.',
+  'Review decisions are available to authorized reviewers.':'Chỉ người có quyền rà soát mới được đưa ra quyết định duyệt.',
+  'Submit this version for review before making a decision.':'Nộp phiên bản này để rà soát trước khi đưa ra quyết định.',
+  'Upload a revised version and submit it for review.':'Tải lên phiên bản đã chỉnh sửa và nộp lại để rà soát.',
+  'Add a comment':'Thêm bình luận','Add Comment':'Lưu bình luận','Comment visibility':'Phạm vi bình luận','No comments yet.':'Chưa có bình luận.',
+  'SHARED_WITH_SUPPLIER':'Chia sẻ với nhà cung cấp','INTERNAL_ONLY':'Chỉ nội bộ','Submit for review':'Nộp để rà soát','Certificate Metadata':'Thông tin chứng chỉ',
+  'Processed copy verification':'Kiểm tra bản xử lý','Verification checks':'Nội dung đã kiểm tra','Verify processed copy':'Xác nhận bản xử lý','Document preview':'Xem trước chứng từ',
+  'Price Redaction Prompt':'Prompt che giá','English Subtitle Prompt':'Prompt phụ đề tiếng Anh','Upload Redacted PDF':'Tải bản PDF đã che giá','Upload English Subtitle PDF':'Tải bản PDF phụ đề tiếng Anh',
   'Verify your email':'Xác minh email','Send verification email':'Gửi email xác minh','I have verified my email':'Tôi đã xác minh email','Back to sign in':'Quay lại đăng nhập',
   'Your password was accepted. Verify your email before opening the workspace.':'Mật khẩu đã được chấp nhận. Hãy xác minh email trước khi vào workspace.',
   'Verification email sent. Open the link in your inbox, then return here.':'Đã gửi email xác minh. Mở liên kết trong hộp thư, sau đó quay lại đây.',

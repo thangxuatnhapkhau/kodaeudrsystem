@@ -1,0 +1,19 @@
+{
+  "passed": [
+    "desktop groups, distinct colors, translated decisions, CSP and first-click confirmation",
+    "rejection requires a reason; failure preserves note and retry; double-click sends once",
+    "approved evidence shows a deliberate change control and quieter file/history tools",
+    "inactive versions, unsubmitted evidence, suppliers and viewers cannot open decisions",
+    "comment form stays separate from review decisions and submits the correct visibility",
+    "mobile confirmation, language switching and zero horizontal overflow"
+  ],
+  "liveWrites": 0,
+  "fixture": "Local mocked API only",
+  "screenshots": [
+    "review-approved.png",
+    "review-confirmation.png",
+    "review-desktop.png",
+    "review-mobile.png",
+    "review-panel.png"
+  ]
+}
