@@ -1,0 +1,17 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> koda-eudr-workspace@2.3.0-staging-candidate test:pdf
+> python -m unittest discover -s tests -p 'test_*.py' -v
+
+test_impossible_size_target_blocks_and_no_file_written (test_derived_pdf.DerivedPDFTests.test_impossible_size_target_blocks_and_no_file_written) ... ok
+test_long_subtitle_blocks_instead_of_clipping (test_derived_pdf.DerivedPDFTests.test_long_subtitle_blocks_instead_of_clipping) ... ok
+test_overwrite_source_blocked (test_derived_pdf.DerivedPDFTests.test_overwrite_source_blocked) ... ok
+test_scanned_price_is_removed_from_pixels (test_derived_pdf.DerivedPDFTests.test_scanned_price_is_removed_from_pixels) ... ok
+test_subtitle_preserves_page_count_and_original (test_derived_pdf.DerivedPDFTests.test_subtitle_preserves_page_count_and_original) ... ok
+test_text_redaction_removes_hidden_content_and_preserves_original (test_derived_pdf.DerivedPDFTests.test_text_redaction_removes_hidden_content_and_preserves_original) ... ok
+test_uncovered_price_blocks (test_derived_pdf.DerivedPDFTests.test_uncovered_price_blocks) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 1.919s
+
+OK

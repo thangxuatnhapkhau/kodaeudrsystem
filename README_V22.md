@@ -1,5 +1,7 @@
 # KODA EUDR Workspace — v2.2 staging candidate
 
+**Historical baseline.** For the current v2.3 staging candidate, use `README_V23.md` and `release/ACCEPTANCE_REPORT_V23.md`. The v2.2 Admin and upload-limit statements below do not describe the current source.
+
 Prepared 7 October 2026 from the supplied Google Drive workspace and live header-only inspection of EUDR SYSTEM. This is an incremental implementation candidate, not a production release or regulatory approval. Production files, Sheet rows, sharing permissions, Firebase configuration and deployments were not changed.
 
 ## Start here

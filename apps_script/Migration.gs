@@ -84,9 +84,10 @@ const V22_COLUMNS_={
 };
 Object.keys(V22_COLUMNS_).forEach(n=>SCHEMA[n]=SCHEMA[n].concat(V22_COLUMNS_[n]));
 SCHEMA['24_SO_PRODUCTS']=['id','case_id','sku','product_name','quantity','quantity_uom','image_document_id','sequence','active','created_at','created_by','updated_at','updated_by'];
+const V22_SCHEMA_=JSON.parse(JSON.stringify(SCHEMA));
 function migrationV22Plan_(){
- const db=db_();return Object.keys(SCHEMA).map(n=>{
-  const s=db.getSheetByName(n),expected=SCHEMA[n],base=V22_BASE_[n];
+ const db=db_();return Object.keys(V22_SCHEMA_).map(n=>{
+  const s=db.getSheetByName(n),expected=V22_SCHEMA_[n],base=V22_BASE_[n];
   if(!s){if(n!=='24_SO_PRODUCTS')fail_('SCHEMA_MISMATCH','Missing '+n);return {name:n,create:true,add:expected};}
   const actual=s.getRange(1,1,1,s.getLastColumn()).getValues()[0];
   if(actual.length<(base?base.length:expected.length)||actual.length>expected.length||actual.some((h,i)=>h!==expected[i]))fail_('SCHEMA_MISMATCH','Unexpected header '+n);
@@ -98,7 +99,7 @@ function migrateV22(dryRun){
  if(!rows_('05_OWNER_MASTER').some(u=>u.email===email&&u.role==='ADMIN'&&u.active==='YES'))fail_('PERMISSION_DENIED','Existing deploying Admin required');
  // Editor-only action. Production execution requires the release approval process.
  return lock_(()=>{const plan=migrationV22Plan_();if(dryRun!==false)return {version:'2.2.0',dry_run:true,plan};
-  let products=0;plan.forEach(p=>{const s=db_().getSheetByName(p.name)||db_().insertSheet(p.name),expected=SCHEMA[p.name];if(s.getMaxColumns()<expected.length)s.insertColumnsAfter(s.getMaxColumns(),expected.length-s.getMaxColumns());if(p.add.length)s.getRange(1,(p.start||0)+1,1,p.add.length).setValues([p.add]);s.setFrozenRows(1);});
+  let products=0;plan.forEach(p=>{const s=db_().getSheetByName(p.name)||db_().insertSheet(p.name),expected=V22_SCHEMA_[p.name];if(s.getMaxColumns()<expected.length)s.insertColumnsAfter(s.getMaxColumns(),expected.length-s.getMaxColumns());if(p.add.length)s.getRange(1,(p.start||0)+1,1,p.add.length).setValues([p.add]);s.setFrozenRows(1);});
   rows_('01_SO_MASTER').forEach(c=>{const existing=rows_('24_SO_PRODUCTS').filter(p=>p.case_id===c.id);if(existing.length)return;const id=stable_('legacy-product:'+c.id);add_('24_SO_PRODUCTS',{id,case_id:c.id,product_name:c.product||'',image_document_id:c.product_image_id||'',sequence:1,active:'YES',created_at:c.created_at||now_(),created_by:email,updated_at:now_(),updated_by:email});products++;});
   // No implicit capability grants, approvals, folder moves, legal confirmations or status conversions.
   const columns=plan.reduce((n,p)=>n+p.add.length,0);if(columns||products)audit_('SCHEMA_MIGRATED','','','',JSON.stringify({version:'2.2.0',columns,products}),email);
@@ -106,3 +107,21 @@ function migrateV22(dryRun){
  });
 }
 
+// V2.3: Order/Tier-scoped requirement decisions; no existing task row is rewritten.
+const V23_BASE_=JSON.parse(JSON.stringify(SCHEMA));
+const V23_TASK_COLUMNS_=['override_state','override_reason','override_by','override_at'];
+SCHEMA['04_EVIDENCE_TRACKER']=SCHEMA['04_EVIDENCE_TRACKER'].concat(V23_TASK_COLUMNS_);
+function migrateV23(dryRun){
+ const email=Session.getEffectiveUser().getEmail().toLowerCase();
+ if(!rows_('05_OWNER_MASTER').some(u=>u.email===email&&u.role==='ADMIN'&&u.active==='YES'))fail_('PERMISSION_DENIED','Existing deploying Admin required');
+ return lock_(()=>{
+  const s=db_().getSheetByName('04_EVIDENCE_TRACKER'),expected=SCHEMA['04_EVIDENCE_TRACKER'],base=V23_BASE_['04_EVIDENCE_TRACKER'];
+  if(!s)fail_('SCHEMA_MISMATCH','Evidence tracker missing');
+  const actual=s.getRange(1,1,1,s.getLastColumn()).getValues()[0];
+  if(actual.length<base.length||actual.length>expected.length||actual.some((h,i)=>h!==expected[i]))fail_('SCHEMA_MISMATCH','Evidence tracker headers changed');
+  const add=expected.slice(actual.length);
+  if(dryRun!==false)return {version:'2.3.0',dry_run:true,tab:'04_EVIDENCE_TRACKER',add,records_changed:0};
+  if(add.length){if(s.getMaxColumns()<expected.length)s.insertColumnsAfter(s.getMaxColumns(),expected.length-s.getMaxColumns());s.getRange(1,actual.length+1,1,add.length).setValues([add]);s.setFrozenRows(1);audit_('SCHEMA_MIGRATED','','','',JSON.stringify({version:'2.3.0',columns:add.length,records_changed:0}),email);}
+  return {version:'2.3.0',dry_run:false,columns:add.length,records_changed:0};
+ });
+}
