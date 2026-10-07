@@ -34,7 +34,7 @@ Deploy staging Apps Script as the designated service identity, retaining signed-
 
 Run `npm ci`, `npm test`, `npm run check`. Python PDF tools stay in the approved offline worker environment. Do not replace Netlify with Sites hosting.
 
-Deploy a new staging version of both backend and frontend together. Provision/bind staging Firebase users using the retained Admin flow. Assign needed order scopes and explicit business capabilities. Verify Admin without SO_VIEW is denied before and after a grant/revocation test. Do not email credentials from automation.
+Deploy a new staging version of both backend and frontend together. Provision/bind staging Firebase users using the retained Admin flow. Assign needed order scopes and explicit business capabilities to non-Admin roles. Verify Admin has all application capabilities without a per-user grant. Do not email credentials from automation. For v2.3, run the additive `migrateV23(true)` preview and `migrateV23(false)` on the backed-up staging workbook before deploying the v2.3 backend; see `ACCEPTANCE_REPORT_V23.md`.
 
 ## 5. Legal and business configuration
 

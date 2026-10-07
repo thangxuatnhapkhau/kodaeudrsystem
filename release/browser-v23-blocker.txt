@@ -1,0 +1,2 @@
+07 October 2026 — local browser visual QA: BLOCKED.
+Playwright installed temporarily, but `npx playwright install chromium` failed after five attempts. The download endpoint returned 0 MiB / an invalid or truncated ZIP ("End of central directory record signature not found"). No desktop/tablet/mobile screenshot or browser PASS is claimed. DOM tests passed separately; run `npm run test:browser` in a working Chromium staging environment.

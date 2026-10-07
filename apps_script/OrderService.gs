@@ -88,6 +88,30 @@ function syncNodeRequirements_(nodeId,u){const node=rows_('15_SUPPLY_CHAIN').fin
  rules.forEach(r=>{const id=stable_('task:'+nodeId+':'+r.id);if(!rows_('04_EVIDENCE_TRACKER').some(t=>t.id===id))add_('04_EVIDENCE_TRACKER',{id,case_id:m.case_id,material_id:m.id,chain_node_id:nodeId,supplier_id:node.supplier_id,evidence:r.evidence,department:r.department,owner:u.email,required:r.required||'YES',requirement_id:r.id,rule_version:r.rule_version||'LEGACY',evidence_block:BLOCKS_[r.evidence]||'05_Upstream_Traceability',status:'MISSING',created_at:now_(),updated_at:now_()});});
 }
 function updateEvidenceRequirement(input){const u=requireCapability_('POLICY_EDIT');return withOperation_(()=>{const old=input.id?rows_('03_EVIDENCE_REQUIREMENT').find(r=>r.id===input.id):null;if(input.id&&!old)fail_('INVALID_INPUT','Requirement missing');const value={material:text_(input.material||'*',150),evidence:text_(input.evidence||'',200),department:text_(input.department||'Purchasing',100),tier:text_(input.tier||'*',30),node_type:text_(input.node_type||'*',50),enabled:input.enabled||'YES',required:input.required||'YES',rule_version:text_(input.rule_version||'',100),effective_date:isoDate_(input.effective_date),updated_at:now_(),updated_by:u.email};if(!['*','DIRECT'].includes(value.tier)&&! /^[1-9][0-9]*$/.test(value.tier)||!['*','SUPPLIER','PROCESSOR','TRADER','PRODUCER','FOREST_OWNER','LOG_SUPPLIER','PLOT'].includes(value.node_type))fail_('INVALID_INPUT','Invalid tier or node type');if(!value.evidence||!value.rule_version||!['YES','NO'].includes(value.enabled)||!['YES','NO'].includes(value.required))fail_('INVALID_INPUT','Evidence, version and flags required');const id=stable_('requirement:'+u.email+':'+BRIDGE_REQUEST_KEY);if(!rows_('03_EVIDENCE_REQUIREMENT').some(r=>r.id===id))add_('03_EVIDENCE_REQUIREMENT',{...value,id,policy_id:old?(old.policy_id||old.id):id});auditOnce_('EVIDENCE_POLICY_VERSIONED','',id,JSON.stringify(old||{}),JSON.stringify(value),u);return {id,note:'Existing tasks retain their recorded requirement version'};});}
+function requirementDecision_(state,reason){
+ if(!['REQUIRED','OPTIONAL','NOT_REQUIRED'].includes(state))fail_('INVALID_INPUT','Invalid requirement decision');
+ const note=text_(reason||'',1000);if(!note)fail_('INVALID_INPUT','Reason for scoped requirement change required');
+ return {required:state==='REQUIRED'?'YES':'NO',override_state:state,override_reason:note};
+}
+function setTaskRequirement(id,input){const u=requireCapability_('POLICY_EDIT');if(!input||typeof input!=='object')fail_('INVALID_INPUT','Requirement decision required');return withOperation_(()=>{
+ const t=task_(id,u);if(t.evidence==='Sales order')fail_('INVALID_INPUT','Sales Order review cannot be disabled');
+ if(String(input.expected_updated_at||'')!==String(t.updated_at||''))fail_('VERSION_CONFLICT','Task changed; refresh before overriding');
+ const value={...requirementDecision_(input.state,input.reason),override_by:u.email,override_at:now_(),updated_at:now_()};
+ patch_('04_EVIDENCE_TRACKER',id,value);auditOnce_('EVIDENCE_REQUIREMENT_OVERRIDDEN',t.case_id,id,JSON.stringify({required:t.required,override_state:t.override_state||''}),JSON.stringify(value),u);
+ return {id,state:value.override_state};
+ });}
+function addScopedRequirement(caseId,input){const u=requireCapability_('POLICY_EDIT');if(!input||typeof input!=='object')fail_('INVALID_INPUT','Scoped evidence input required');return withOperation_(()=>{
+ order_(caseId,u);const m=rows_('02_SO_ITEM_MATERIAL').find(m=>m.id===input.material_id&&m.case_id===caseId);
+ const node=input.chain_node_id?rows_('15_SUPPLY_CHAIN').find(n=>n.id===input.chain_node_id&&n.case_id===caseId&&n.material_id===input.material_id):null;
+ if(!m||input.chain_node_id&&!node)fail_('INVALID_INPUT','Material/Tier outside this Order');
+ const evidence=text_(input.evidence||'',200),block=text_(input.evidence_block||'',80),allowed=['01_Commercial_Shipping','02_FSC_Certification','03_Transport','04_Geolocation','05_Upstream_Traceability'];
+ if(!evidence||evidence==='Sales order'||!allowed.includes(block))fail_('INVALID_INPUT','Evidence type and block required');
+ const decision=requirementDecision_(input.state,input.reason),id=stable_('scoped-task:'+caseId+':'+m.id+':'+(node?.id||'MATERIAL')+':'+BRIDGE_REQUEST_KEY);
+ const existing=rows_('04_EVIDENCE_TRACKER').find(t=>t.id===id);if(existing)return {id};
+ if(rows_('04_EVIDENCE_TRACKER').some(t=>t.case_id===caseId&&t.material_id===m.id&&(t.chain_node_id||'')===(node?.id||'')&&String(t.evidence).trim().toLowerCase()===evidence.toLowerCase()))fail_('HUMAN_MAPPING_REQUIRED','This evidence type already exists for the selected Order/Material/Tier');
+ const value={id,case_id:caseId,material_id:m.id,chain_node_id:node?.id||'',supplier_id:node?.supplier_id||'',evidence,evidence_block:block,department:'Marketing',owner:u.email,required:decision.required,override_state:decision.override_state,override_reason:decision.override_reason,override_by:u.email,override_at:now_(),status:'MISSING',rule_version:'ORDER_OVERRIDE',created_at:now_(),updated_at:now_()};
+ add_('04_EVIDENCE_TRACKER',value);auditOnce_('SCOPED_EVIDENCE_ADDED',caseId,id,'',JSON.stringify(value),u);return {id};
+ });}
 function updateTask(id,change){const u=requireCapability_('EVIDENCE_REVIEW'),t=task_(id,u);if(change.status!==undefined)fail_('INVALID_INPUT','Use reviewDocument for status decisions');return lock_(()=>{
  const o={updated_at:now_()};if(change.owner==='')o.owner='';else if(change.owner!==undefined){const owner=rows_('05_OWNER_MASTER').find(x=>x.email===change.owner&&x.active==='YES');if(!owner)fail_('INVALID_INPUT','Owner not active');o.owner=owner.email;if(owner.role==='SUPPLIER_USER')o.supplier_id=owner.supplier_id;}
  if(change.supplier_id!==undefined){if(change.supplier_id&&!rows_('14_SUPPLIERS').some(s=>s.id===change.supplier_id&&s.active==='YES'))fail_('INVALID_INPUT','Supplier not active');o.supplier_id=change.supplier_id;}

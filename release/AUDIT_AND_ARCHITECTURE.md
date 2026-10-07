@@ -1,5 +1,7 @@
 # Audit and architecture decision
 
+**Historical v2.2 design record.** Admin rights, the evidence upload limit and scoped requirements changed in v2.3. Use `ACCEPTANCE_REPORT_V23.md` for the current implementation and release gates.
+
 ## Inspected sources
 
 Read the downloaded contents of all 14 Apps Script files, the frontend, Netlify handlers and existing tests. Read live workbook metadata (23 tabs) and headers for 16 workflow/security tables, with no business-row mutation or export. Compared the observed headers against code schema; matching prefixes are preserved in `tests/fixtures/live-headers-2026-10-07.json`.

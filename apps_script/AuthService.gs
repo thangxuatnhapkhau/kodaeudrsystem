@@ -54,10 +54,11 @@ function bootstrapFirebaseAdmin(uid){const email=Session.getEffectiveUser().getE
  return lock_(()=>{patch_('05_OWNER_MASTER',email,{auth_provider:'FIREBASE',auth_uid:uid,must_change_password:'NO',password_changed_at:now_()});audit_('AUTH_ACCOUNT_PROVISIONED','','','','Initial Firebase admin bound',email);return {email,uid};});}
 
 
-// Capabilities are evaluated server-side; ADMIN is not an evidence reviewer by default.
+// Capabilities are evaluated server-side. Admin has every application capability.
 const CAPABILITIES_=['ORDER_EDIT','SO_VIEW','MATERIAL_EDIT','SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','EVIDENCE_REVIEW','POLICY_EDIT','AI_USE','AI_REVIEW','GEO_EDIT','GEO_REVIEW','EXPORT','WORKFLOW_CLOSE'];
 function capabilities_(u){
- const grants={MARKETING:['ORDER_EDIT','SO_VIEW','EVIDENCE_REVIEW','POLICY_EDIT','AI_USE','AI_REVIEW','GEO_REVIEW','EXPORT','WORKFLOW_CLOSE'],MP:['MATERIAL_EDIT','AI_USE'],PURCHASING:['SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','GEO_EDIT','AI_USE'],SOURCING:['SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','GEO_EDIT','AI_USE'],SUPPLIER_USER:['EVIDENCE_UPLOAD','GEO_EDIT'],EUDR_REVIEWER:['AI_USE'],INTERNAL_USER:[],VIEWER:[],ADMIN:[]};
+ if(u.role==='ADMIN')return [...CAPABILITIES_];
+ const grants={MARKETING:['ORDER_EDIT','SO_VIEW','EVIDENCE_REVIEW','POLICY_EDIT','AI_USE','AI_REVIEW','GEO_REVIEW','EXPORT','WORKFLOW_CLOSE'],MP:['MATERIAL_EDIT','AI_USE'],PURCHASING:['SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','GEO_EDIT','AI_USE'],SOURCING:['SUPPLIER_EDIT','CHAIN_EDIT','EVIDENCE_UPLOAD','GEO_EDIT','AI_USE'],SUPPLIER_USER:['EVIDENCE_UPLOAD','GEO_EDIT'],EUDR_REVIEWER:['EVIDENCE_REVIEW','POLICY_EDIT','GEO_REVIEW','AI_USE','AI_REVIEW','EXPORT'],INTERNAL_USER:[],VIEWER:[]};
  let extra=[];try{extra=JSON.parse(u.capabilities||'[]');}catch(e){}if(!Array.isArray(extra))extra=[];
  // External users cannot elevate their supplier-isolated access with a capability cell.
  if(u.role==='SUPPLIER_USER')extra=[];
@@ -67,5 +68,4 @@ function hasCapability_(u,cap){return capabilities_(u).includes(cap);}
 function requireCapability_(cap){const u=user_();if(!hasCapability_(u,cap))fail_('PERMISSION_DENIED','Required capability: '+cap);return u;}
 function salesOrderDerived_(d){const seen=new Set();while(d){if(d.kind==='SO'||d.document_type==='Sales order')return true;if(seen.has(d.id))return true;seen.add(d.id);if(!d.source_document_id)return false;d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===d.source_document_id);if(!d)return true;}return false;}
 function documentVisible_(d,u){return !salesOrderDerived_(d)||hasCapability_(u,'SO_VIEW');}
-function grantCapabilities(input){const actor=requireRole_(['ADMIN']);if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Explicit capability assignment required');return withOperation_(()=>{const target=rows_('05_OWNER_MASTER').find(x=>x.email===input.email);if(!target||target.role==='SUPPLIER_USER'||!Array.isArray(input.capabilities)||input.capabilities.some(x=>!CAPABILITIES_.includes(x)))fail_('INVALID_INPUT','Invalid capability assignment');const value=JSON.stringify([...new Set(input.capabilities)]);patch_('05_OWNER_MASTER',target.email,{capabilities:value});audit_('CAPABILITIES_GRANTED','',target.email,target.capabilities||'[]',value,actor.email);return {email:target.email};});}
-
+function grantCapabilities(input){const actor=requireRole_(['ADMIN']);if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Explicit capability assignment required');return withOperation_(()=>{const target=rows_('05_OWNER_MASTER').find(x=>x.email===input.email);if(!target||['ADMIN','SUPPLIER_USER'].includes(target.role)||!Array.isArray(input.capabilities)||input.capabilities.some(x=>!CAPABILITIES_.includes(x)))fail_('INVALID_INPUT','Invalid capability assignment');const value=JSON.stringify([...new Set(input.capabilities)]);patch_('05_OWNER_MASTER',target.email,{capabilities:value});audit_('CAPABILITIES_GRANTED','',target.email,target.capabilities||'[]',value,actor.email);return {email:target.email};});}
