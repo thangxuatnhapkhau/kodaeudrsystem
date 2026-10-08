@@ -1,0 +1,9 @@
+KODA EUDR WORKSPACE 2.4.8 — AI Assistant
+
+Apply over 2.4.7. Copy files to the same relative paths in your GitHub repository, commit, and deploy the frontend/functions through Netlify. Update the four changed Apps Script .gs files in the bound backend project and deploy a NEW Web App version. The frontend deployment alone cannot create folders, register PDFs, or change export. No workbook migration is required; the code uses existing columns.
+
+Flow: Generate Prompt creates Order/AI_Output/PRICE_REDACTION and Order/AI_Output/ENGLISH_SUBTITLE. Attach exact source bytes in ChatGPT. Register the PDF and actual boolean validation report in Prompt Studio or View AI Results. The app saves exact bytes into the matching output folder and creates an UPLOADED, unverified 06_DOCUMENT_REGISTER row. An authorized reviewer checks the PDF and verifies that row before Export. English Subtitle requires an approved, human-verified REDACTED source. It preserves price masks, places English below each related Vietnamese line/cell, and requires redaction_preserved: true only after actual inspection.
+
+For an existing external AI_OUTPUT such as SO26-0610, View AI Results > Register for review reads its existing Drive file, checks the stored checksum when present, copies the exact bytes into the processed-copy folder, and writes a NEW unverified row. Supply a truthful validation report after inspecting the actual PDF. The external row remains unchanged. A reviewer then verifies the new row before Export. Do not convert a string claim or unknown check to true. Originals remain untouched.
+
+Run npm run check, npm test, npm run test:pdf on the full source. Review Drive ACLs separately.
