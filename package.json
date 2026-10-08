@@ -1,7 +1,7 @@
 {
   "name": "koda-eudr-workspace",
   "private": true,
-  "version": "2.3.0-staging-candidate",
+  "version": "2.4.0-staging-candidate",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
