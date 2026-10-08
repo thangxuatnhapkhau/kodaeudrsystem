@@ -46,6 +46,9 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 .action-menu[open]>summary{background:#dcebe0}
 .action-menu-items{position:absolute;right:0;bottom:calc(100% + 7px);min-width:210px;padding:7px;z-index:4;display:grid;gap:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px #183c2e25}
 .action-menu-items button{width:100%;text-align:left;white-space:nowrap}
+.action-menu-group{display:grid;gap:5px}
+.action-menu-group+.action-menu-group{border-top:1px solid var(--line);padding-top:8px;margin-top:5px}
+.action-menu-group strong{font-size:11px;color:var(--muted);font-weight:750;padding:4px 6px;max-width:290px;overflow-wrap:anywhere}
 @media(max-width:700px){.workspace-summary{grid-template-columns:1fr}.workspace-summary .product-preview{width:100%;max-width:225px;height:120px}.action-menu-items{right:auto;left:0}}
 
 /* Each task group gets the full content width so actions remain on a single line. */
