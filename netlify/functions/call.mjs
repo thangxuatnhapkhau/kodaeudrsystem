@@ -5,6 +5,8 @@ const equal=(a,b)=>timingSafeEqual(createHash('sha256').update(a).digest(),creat
 const actions=new Set(['exportGeoJSON','getMaterialReadiness','getDossierReview','setTaskRequirement','addScopedRequirement','reopenCase','updateOrder','listOrderProducts','saveOrderProduct','removeOrderProduct','uploadProductImage','createMaterial','updateMaterial','listSuppliers','updateChainNode','updateEvidenceRequirement','removeDraftEvidence','repairExistingSOReviewTask','getAIOutputs','reviewAIResult','grantCapabilities','beginUpload','uploadChunk','finishUpload','getDocumentChunk','recordLogin','bootstrap','createCase','completeCase','createOrder','findOrderFolders','previewMaterials','confirmMaterials','addChainNode','updateTask','uploadEvidence','submitDocument','reviewDocument','getDocument','addComment','uploadProcessed','verifyProcessed','syncCalendar','getAiPrompt','importAiResult','saveGeo','reviewGeo','exportPackage','updateMaterialInfo','saveCertificate','saveCountryRisk','manageUser','manageSupplier','saveSettings','markNotification']);
 const reply=(statusCode,value,requestId)=>({statusCode,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},body:JSON.stringify({...value,requestId})});
 const error=(statusCode,code,message,id)=>reply(statusCode,{ok:false,data:null,error:{code,message}},id);
+const upstreamLog=(requestId,action,kind,details={})=>console.error('APPS_SCRIPT_UPSTREAM',JSON.stringify({requestId,action,kind,...details}));
+const responseHost=response=>{try{return new URL(response.url).hostname;}catch{return 'unknown';}};
 export async function handler(event){
  const requestId=randomUUID();if(event.httpMethod!=='POST')return error(405,'METHOD_NOT_ALLOWED','POST required',requestId);
  const secret=process.env.BRIDGE_SECRET||'',url=process.env.APPS_SCRIPT_WEBAPP_URL||'';
@@ -30,13 +32,18 @@ export async function handler(event){
  if(body.requestKey!==undefined&&!/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestKey))return error(400,'INVALID_INPUT','Invalid request key',requestId);
  const payload=JSON.stringify({ts:Date.now(),nonce:requestId,actor:actor.trim().toLowerCase(),authUid,action:body.action,args:body.args,requestKey:body.requestKey||requestId,origin});
  const signature=createHmac('sha256',secret).update(payload).digest('hex');
+ const started=Date.now();
  try{
-  const upstream=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({payload,signature}),redirect:'follow',signal:AbortSignal.timeout(25000)});
-  if(!upstream.ok)return error(502,'UPSTREAM_ERROR','Apps Script returned HTTP '+upstream.status,requestId);
+  // Apps Script ContentService redirects its JSON to script.googleusercontent.com.
+  // Never replay a write here: a lost response can arrive after the mutation completed.
+  const upstream=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({payload,signature}),redirect:'follow',signal:AbortSignal.timeout(45000)});
+  const details={httpStatus:upstream.status,contentType:upstream.headers?.get?.('content-type')||'',host:responseHost(upstream),elapsedMs:Date.now()-started};
+  if(!upstream.ok){upstreamLog(requestId,body.action,'HTTP',details);return error(502,'UPSTREAM_HTTP','Apps Script returned HTTP '+upstream.status+'; check this action before retrying',requestId);}
   const raw=await upstream.text();if(raw.length>5500000)return error(413,'RESPONSE_TOO_LARGE','Download exceeds current bridge limit',requestId);
-  let result;try{result=JSON.parse(raw);}catch{return error(502,'UPSTREAM_ERROR','Apps Script returned a non-JSON response',requestId);}
+  let result;try{result=JSON.parse(raw);}catch{upstreamLog(requestId,body.action,'NON_JSON',details);return error(502,'UPSTREAM_NON_JSON','Apps Script did not return JSON; check its deployment and access settings',requestId);}
+  if(!result||typeof result!=='object'||typeof result.ok!=='boolean'){upstreamLog(requestId,body.action,'FORMAT',details);return error(502,'UPSTREAM_FORMAT','Apps Script returned an unexpected response; check the deployed version',requestId);}
   if(result.ok)return reply(200,{ok:true,data:result.data??result.result,error:null},requestId);
-  const e=typeof result.error==='object'?result.error:{code:'UPSTREAM_ERROR',message:String(result.error||'Request failed')};
+  const e=result.error&&typeof result.error==='object'?result.error:{code:'UPSTREAM_ERROR',message:String(result.error||'Request failed')};
   return error(e.code==='INTERNAL_ERROR'?500:['AUTH_REQUIRED','PERMISSION_DENIED'].includes(e.code)?403:400,e.code,e.message,requestId);
- }catch{return error(502,'UPSTREAM_UNAVAILABLE','Cannot reach Apps Script; retry with the same request key',requestId);}
+ }catch(cause){const timedOut=cause?.name==='TimeoutError'||cause?.name==='AbortError';upstreamLog(requestId,body.action,timedOut?'TIMEOUT':'NETWORK',{elapsedMs:Date.now()-started});return error(timedOut?504:502,timedOut?'UPSTREAM_TIMEOUT':'UPSTREAM_UNAVAILABLE',timedOut?'Apps Script did not respond in time; check whether the action was saved before retrying':'Cannot reach Apps Script; check whether the action was saved before retrying',requestId);}
 }

@@ -46,3 +46,46 @@ test('Admin without explicit grants can see New Order in the UI',()=>{
 test('new order supports add/remove products and optional image preview controls',()=>{const w=setup();w.eval('newOrder()');assert.equal(w.document.querySelectorAll('.new-product').length,1);w.document.querySelector('#addProduct').click();assert.equal(w.document.querySelectorAll('.new-product').length,2);w.document.querySelector('.new-product button').click();assert.equal(w.document.querySelectorAll('.new-product').length,1);assert.ok(w.document.querySelector('input[name="product_image"]'));assert.ok(w.document.querySelector('#orderForm').textContent.includes('3 MB'));});
 test('MP Material, policy and supplier forms use backend action-compatible fields',()=>{const w=setup();w.eval("materialsDialog('c')");assert.ok(w.document.querySelector('[name="supplier_po"]'));assert.equal(w.document.querySelectorAll('[name="product"]').length,2);w.eval('policyDialog()');assert.ok(w.document.querySelector('[name="rule_version"]'));w.eval("supplierForm('')");assert.ok(w.document.querySelector('[name="supplier_code"]'));});
 test('Vietnamese labels work and MATERIAL_EXTRACTION is absent from prompt menu',()=>{const w=setup();w.eval("window.EudrI18n.setLanguage('vi');workspace();promptStudio();");assert.equal(w.EudrI18n.t('AI Review Outputs'),'Kết quả kiểm tra AI');assert.equal(w.document.querySelector('[value="MATERIAL_EXTRACTION"]'),null);});
+test('material and supplier selection scopes four evidence blocks; relationship and evidence actions sit at section end',()=>{
+ const w=setup();w.eval("testState.materials.push({id:'m2',case_id:'c',material:'Beech'});testState.chain=[{id:'n1',case_id:'c',material_id:'m',display_name:'Mill A',tier:1,supplier_id:'sa'},{id:'n2',case_id:'c',material_id:'m2',display_name:'Mill B',tier:1,supplier_id:'sb'}];testState.tasks=[{id:'order',case_id:'c',evidence:'Sales order',evidence_block:'01_Commercial_Shipping',document_id:'d-so',status:'APPROVED'},{id:'a',case_id:'c',material_id:'m',chain_node_id:'n1',evidence:'FSC Cert',evidence_block:'02_FSC_Certification',status:'MISSING'},{id:'b',case_id:'c',material_id:'m2',chain_node_id:'n2',evidence:'INV',evidence_block:'01_Commercial_Shipping',status:'MISSING'}];workspace();bind();");
+ assert.equal(w.document.querySelectorAll('.workspace-data-section').length,3);
+ assert.ok(w.document.querySelector('.workspace-data-section:last-child [data-action="addRelationship"]'));
+ assert.ok(w.document.querySelector('.workspace-data-section:nth-child(2) .workspace-actions [data-action="materialInfo"]'));
+ assert.equal(w.document.querySelectorAll('.evidence-block').length,4);
+ assert.ok(w.document.querySelector('.evidence-block').textContent.includes('Sales order'));
+ w.document.querySelector('[data-chain-node="n1"]').click();
+ assert.ok(w.document.querySelector('.evidence-block').textContent.includes('Sales Order (KODA – Mill A)'));
+ assert.ok(w.document.querySelector('[data-evidence-block="02_FSC_Certification"]').textContent.includes('FSC Cert'));
+ assert.equal(w.document.querySelectorAll('[data-evidence-block="01_Commercial_Shipping"] [data-action="document"]').length,1);
+ assert.equal(w.document.querySelectorAll('[data-evidence-block]').length,4);
+ assert.equal(w.document.querySelector('[data-evidence-block="05_Upstream_Traceability"]'),null);
+ assert.ok(w.document.querySelector('.dossier-step'));
+ w.document.querySelector('[data-material="m2"]').click();
+ assert.equal(w.document.querySelector('[data-chain-node="n1"]'),null);
+ assert.ok(w.document.querySelector('[data-chain-node="n2"]'));
+ w.document.querySelector('[data-chain-node="n2"]').click();
+ assert.ok(w.document.querySelector('[data-evidence-block="01_Commercial_Shipping"]').textContent.includes('INV'));
+});
+test('My Tasks uses two columns with role scope, while Admin sees all',()=>{
+ const w=setup();w.eval("testState.user={email:'p@test.example',role:'PURCHASING',department:'Purchasing',capabilities:['EVIDENCE_UPLOAD']};testState.tasks=[{id:'mine',case_id:'c',material_id:'m',owner:'p@test.example',department:'Purchasing',evidence:'PO',status:'MISSING',due:'2026-10-01'},{id:'review',case_id:'c',material_id:'m',owner:'other@test.example',assigned_reviewer:'p@test.example',evidence:'INV',status:'SUBMITTED',due:'2026-10-08'},{id:'other',case_id:'c',material_id:'m',owner:'m@test.example',department:'Marketing',evidence:'FSC',status:'MISSING',due:'2026-10-08'}];myTasks();");
+ assert.equal(w.document.querySelectorAll('.task-columns > div').length,2);
+ assert.ok(w.document.querySelector('.task-columns').textContent.includes('PO'));
+ assert.ok(w.document.querySelector('.task-columns').textContent.includes('INV'));
+ assert.ok(!w.document.querySelector('.task-columns').textContent.includes('FSC'));
+ w.eval("testState.user.role='ADMIN';myTasks()");assert.ok(w.document.querySelector('.task-columns').textContent.includes('FSC'));
+});
+test('Calendar shows role-scoped dated task count and opens that date details',()=>{
+ const w=setup();w.eval("testState.user={email:'p@test.example',role:'PURCHASING',department:'Purchasing',capabilities:['EVIDENCE_UPLOAD']};testState.tasks=[{id:'mine',case_id:'c',material_id:'m',owner:'p@test.example',evidence:'Invoice',status:'MISSING',due:'2026-10-08'},{id:'other',case_id:'c',material_id:'m',owner:'m@test.example',evidence:'FSC',status:'MISSING',due:'2026-10-08'}];month=new Date(2026,9,1);calendar();bind();");
+ const day=w.document.querySelector('[data-calendar-day="2026-10-08"]');assert.ok(day);assert.match(day.textContent,/1 task/);day.click();
+ assert.ok(w.document.querySelector('#drawer').open);assert.ok(w.document.querySelector('#drawer').textContent.includes('Invoice'));assert.ok(!w.document.querySelector('#drawer').textContent.includes('FSC'));
+});
+test('Export separates original and verified AI documents, then offers a direct ZIP download',async()=>{
+ const w=setup();w.eval("testState.docs=[{id:'d1',case_id:'c',kind:'EVIDENCE',name:'INV.pdf',version:1,status:'APPROVED',active_version:'YES'},{id:'d2',case_id:'c',kind:'REDACTED',name:'INV_redacted.pdf',version:1,status:'APPROVED',active_version:'YES',redaction_verified:'YES'},{id:'d3',case_id:'c',kind:'EN_SUBTITLE',name:'unverified.pdf',version:1,status:'UPLOADED',active_version:'YES'}];call=async()=>({name:'SO-TEST.zip',download_id:'export:e1',size_bytes:4500000});exports();");
+ assert.equal(w.document.querySelectorAll('.export-column').length,2);
+ assert.equal(w.document.querySelectorAll('.export-column:first-child input:checked').length,1);
+ assert.equal(w.document.querySelectorAll('.export-column:last-child input:checked').length,1);
+ assert.ok(w.document.querySelector('.export-column:last-child input[value="d3"]:disabled'));
+ w.document.querySelector('#exportSelected').click();await new Promise(resolve=>setImmediate(resolve));
+ assert.ok(w.document.querySelector('#drawer').open);assert.ok(w.document.querySelector('#downloadExport'));
+ assert.ok(w.document.querySelector('#exportResult').textContent.includes('SO-TEST.zip'));
+});

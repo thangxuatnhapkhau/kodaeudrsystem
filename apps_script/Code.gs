@@ -72,7 +72,7 @@ function setup(config){
 function doGet(){return HtmlService.createHtmlOutput('KODA EUDR WORKSPACE API. Open the Netlify site to use the workspace.').setTitle('KODA EUDR WORKSPACE');}
 function db_(){const id=PropertiesService.getScriptProperties().getProperty('DB_ID');if(!id)throw Error('Run setup first');return SpreadsheetApp.openById(id);}
 var TABLE_CACHE_={};
-function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));const v=db_().getSheetByName(n).getDataRange().getValues(),h=v.shift();const result=v.filter(r=>r[0]).map(r=>Object.fromEntries(h.filter(Boolean).map((k,i)=>[k,r[i] instanceof Date?r[i].toISOString():r[i]])));TABLE_CACHE_[n]=result;return result.map(x=>({...x}));}
+function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));const db=db_(),v=db.getSheetByName(n).getDataRange().getValues(),h=v.shift(),tz=db.getSpreadsheetTimeZone();const result=v.filter(r=>r[0]).map(r=>Object.fromEntries(h.filter(Boolean).map((k,i)=>[k,r[i] instanceof Date&&k==='due'?Utilities.formatDate(r[i],tz,'yyyy-MM-dd'):r[i] instanceof Date?r[i].toISOString():r[i]])));TABLE_CACHE_[n]=result;return result.map(x=>({...x}));}
 function safe_(v){return typeof v==='string' && /^[=+@\-]/.test(v)?"'"+v:v;}
 function add_(n,o){delete TABLE_CACHE_[n];db_().getSheetByName(n).appendRow(SCHEMA[n].map(k=>safe_(o[k]===undefined?'':o[k])));}
 function patch_(n,id,o){delete TABLE_CACHE_[n];const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');Object.keys(o).forEach(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');s.getRange(i+1,col+1).setValue(safe_(o[k]));});}

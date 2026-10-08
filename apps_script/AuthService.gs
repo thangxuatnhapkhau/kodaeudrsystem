@@ -62,10 +62,10 @@ function capabilities_(u){
  let extra=[];try{extra=JSON.parse(u.capabilities||'[]');}catch(e){}if(!Array.isArray(extra))extra=[];
  // External users cannot elevate their supplier-isolated access with a capability cell.
  if(u.role==='SUPPLIER_USER')extra=[];
- return [...new Set((grants[u.role]||[]).concat(extra.filter(x=>CAPABILITIES_.includes(x))))];
+ return [...new Set((grants[u.role]||[]).concat(extra.filter(x=>CAPABILITIES_.includes(x)&&x!=='SO_VIEW')))];
 }
 function hasCapability_(u,cap){return capabilities_(u).includes(cap);}
 function requireCapability_(cap){const u=user_();if(!hasCapability_(u,cap))fail_('PERMISSION_DENIED','Required capability: '+cap);return u;}
 function salesOrderDerived_(d){const seen=new Set();while(d){if(d.kind==='SO'||d.document_type==='Sales order')return true;if(seen.has(d.id))return true;seen.add(d.id);if(!d.source_document_id)return false;d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===d.source_document_id);if(!d)return true;}return false;}
 function documentVisible_(d,u){return !salesOrderDerived_(d)||hasCapability_(u,'SO_VIEW');}
-function grantCapabilities(input){const actor=requireRole_(['ADMIN']);if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Explicit capability assignment required');return withOperation_(()=>{const target=rows_('05_OWNER_MASTER').find(x=>x.email===input.email);if(!target||['ADMIN','SUPPLIER_USER'].includes(target.role)||!Array.isArray(input.capabilities)||input.capabilities.some(x=>!CAPABILITIES_.includes(x)))fail_('INVALID_INPUT','Invalid capability assignment');const value=JSON.stringify([...new Set(input.capabilities)]);patch_('05_OWNER_MASTER',target.email,{capabilities:value});audit_('CAPABILITIES_GRANTED','',target.email,target.capabilities||'[]',value,actor.email);return {email:target.email};});}
+function grantCapabilities(input){const actor=requireRole_(['ADMIN']);if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Explicit capability assignment required');return withOperation_(()=>{const target=rows_('05_OWNER_MASTER').find(x=>x.email===input.email);if(!target||['ADMIN','SUPPLIER_USER'].includes(target.role)||!Array.isArray(input.capabilities)||input.capabilities.some(x=>!CAPABILITIES_.includes(x)||x==='SO_VIEW'))fail_('INVALID_INPUT','Invalid capability assignment');const value=JSON.stringify([...new Set(input.capabilities)]);patch_('05_OWNER_MASTER',target.email,{capabilities:value});audit_('CAPABILITIES_GRANTED','',target.email,target.capabilities||'[]',value,actor.email);return {email:target.email};});}

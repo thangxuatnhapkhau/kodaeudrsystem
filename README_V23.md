@@ -1,5 +1,7 @@
 # KODA EUDR Workspace — v2.3 staging candidate
 
+Historical v2.3 candidate. For the upstream/CSP update, read `README_V231.md` and `release/HOTFIX_UPSTREAM_CSP_2026-10-08.md` first; the v2.3 release hash manifest predates those changes.
+
 Prepared 7 October 2026 from the supplied v2.2 staging source plus read-only checks of the live `EUDR SYSTEM` workbook and Drive metadata. This is **not** a production deployment or legal approval. No production Sheet rows, Drive files, sharing ACLs, Firebase settings or Netlify/Apps Script deployments were changed.
 
 ## Read first

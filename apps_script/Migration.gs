@@ -125,3 +125,24 @@ function migrateV23(dryRun){
   return {version:'2.3.0',dry_run:false,columns:add.length,records_changed:0};
  });
 }
+
+// V2.4: additive relationship folders and task repair. Run dry-run on a backed-up staging copy first.
+// Existing files keep their IDs and physical locations; this routine never moves or deletes evidence.
+function migrateV24(dryRun){
+ const email=Session.getEffectiveUser().getEmail().toLowerCase(),u=rows_('05_OWNER_MASTER').find(x=>x.email===email&&x.role==='ADMIN'&&x.active==='YES');
+ if(!u)fail_('PERMISSION_DENIED','Existing deploying Admin required');
+ return lock_(()=>{
+  const nodes=rows_('15_SUPPLY_CHAIN'),tasks=rows_('04_EVIDENCE_TRACKER'),unmapped=[],remap=[];let missingFolders=0;
+  nodes.forEach(n=>{if(!n.folder)fail_('HUMAN_MAPPING_REQUIRED','Relationship folder mapping missing: '+n.id);const f=DriveApp.getFolderById(n.folder);EVIDENCE_FOLDERS_.forEach(block=>{const children=f.getFoldersByName(EVIDENCE_FOLDER_NAMES_[block]);if(!children.hasNext())missingFolders++;else{children.next();if(children.hasNext())fail_('VERSION_CONFLICT','Duplicate relationship evidence folder: '+n.id);}});});
+  tasks.filter(t=>t.evidence_block==='05_Upstream_Traceability'||t.evidence_block&&!EVIDENCE_FOLDERS_.includes(t.evidence_block)).forEach(t=>{const block=BLOCKS_[t.evidence];if(block)remap.push({task_id:t.id,block});else unmapped.push({task_id:t.id,evidence:t.evidence||''});});
+  const unmappedPolicies=currentRequirements_().filter(r=>r.enabled==='YES'&&r.evidence!=='Sales order'&&!BLOCKS_[r.evidence]).map(r=>({policy_id:r.id,evidence:r.evidence||''}));
+  const plan={version:'2.4.0',dry_run:dryRun!==false,relationships:nodes.length,missing_folders:missingFolders,known_tasks_to_map:remap.length,unmapped,unmapped_policies:unmappedPolicies};
+  if(dryRun!==false)return plan;
+  nodes.forEach(n=>relationshipFolders_(DriveApp.getFolderById(n.folder)));
+  remap.forEach(x=>patch_('04_EVIDENCE_TRACKER',x.task_id,{evidence_block:x.block,updated_at:now_()}));
+  const before=rows_('04_EVIDENCE_TRACKER').length;nodes.forEach(n=>syncNodeRequirements_(n.id,u));
+  const created=rows_('04_EVIDENCE_TRACKER').length-before;
+  if(missingFolders||remap.length||created)audit_('WORKSPACE_V24_MIGRATED','','','',JSON.stringify({folders:missingFolders,remapped:remap.length,created}),email);
+  return {...plan,dry_run:false,folders_created:missingFolders,tasks_remapped:remap.length,tasks_created:created};
+ });
+}
