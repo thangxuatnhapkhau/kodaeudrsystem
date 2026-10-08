@@ -31,3 +31,31 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 @media(max-width:700px){.workspace-actions{justify-content:flex-start}.chain-path{gap:7px}}
 .task-columns,.export-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}.task-panel{min-width:0}.task-panel h3{display:flex;align-items:center;justify-content:space-between}.task-count{background:#e3efe4;border-radius:99px;padding:2px 9px;font-size:12px}.export-column{min-width:0;border:1px solid var(--line);border-radius:10px;padding:16px}.export-column .check{align-items:flex-start;overflow-wrap:anywhere}.calendar-day-link{display:block;width:100%;font-size:11px;text-align:left;margin-top:8px}.calendar [data-calendar-day]:focus-visible{outline:3px solid #b68224;outline-offset:2px}
 @media(max-width:980px){.task-columns,.export-columns{grid-template-columns:1fr}}
+
+/* Keep the product image in the order header and give the action rows the full card width. */
+.workspace-summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,225px);gap:22px;align-items:stretch}
+.workspace-summary-copy{min-width:0}
+.workspace-summary .product-preview{min-height:0;height:100%;max-height:154px;border:1px solid #ffffff55;background:#ffffff17;color:#e4efdf;text-align:center;padding:10px}
+.workspace-summary .product-preview p{margin:0;font-size:12px;color:#e4efdf}
+.workspace-summary .product-preview img{max-height:100%;width:100%;object-fit:contain}
+.workspace-data{display:block}
+.workspace-data-main{width:100%}
+.workspace-actions .action-menu{position:relative}
+.action-menu>summary{display:grid;place-items:center;width:35px;min-height:36px;list-style:none;cursor:pointer;border-radius:9px;border:1px solid #bbd0c4;background:#edf4ee;color:var(--forest);font-weight:800}
+.action-menu>summary::-webkit-details-marker{display:none}
+.action-menu[open]>summary{background:#dcebe0}
+.action-menu-items{position:absolute;right:0;bottom:calc(100% + 7px);min-width:210px;padding:7px;z-index:4;display:grid;gap:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px #183c2e25}
+.action-menu-items button{width:100%;text-align:left;white-space:nowrap}
+@media(max-width:700px){.workspace-summary{grid-template-columns:1fr}.workspace-summary .product-preview{width:100%;max-width:225px;height:120px}.action-menu-items{right:auto;left:0}}
+
+/* Each task group gets the full content width so actions remain on a single line. */
+.my-tasks-screen{max-width:1800px}
+.my-tasks-screen .task-columns{grid-template-columns:1fr}
+.my-tasks-screen .task-panel .scroll{overflow-x:auto}
+.my-tasks-screen .task-panel table{min-width:760px;table-layout:fixed}
+.my-tasks-screen .task-panel th:nth-child(1){width:31%}
+.my-tasks-screen .task-panel th:nth-child(2){width:18%}
+.my-tasks-screen .task-panel th:nth-child(3){width:14%}
+.my-tasks-screen .task-panel th:nth-child(4){width:37%}
+.my-tasks-screen td .row{flex-wrap:nowrap;white-space:nowrap}
+.my-tasks-screen td .row button{flex:none}
