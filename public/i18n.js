@@ -108,3 +108,9 @@ Object.assign(translations.vi,{
  'Evidence needs block mapping':'Chứng từ cần phân loại vào khối','Original approved documents':'Chứng từ gốc đã duyệt','AI processed copies':'Bản xử lý bằng AI','Export package':'Xuất bộ chứng từ','Exporting ZIP…':'Đang tạo tệp ZIP…','ZIP is ready.':'Tệp ZIP đã sẵn sàng.','Download ZIP':'Tải ZIP','Export failed.':'Xuất bộ chứng từ thất bại.','Select at least one approved document.':'Chọn ít nhất một chứng từ đã duyệt.',
  'EVIDENCE_BLOCK_REQUIRED':'Cần phân loại chứng từ cũ vào một trong bốn khối trước khi tải lên.'
 });
+Object.assign(translations.vi,{
+ 'Orders to export':'Đơn hàng cần xuất','Export packages':'Xuất các bộ chứng từ','Select at least one order.':'Chọn ít nhất một đơn hàng.',
+ 'Select at least one approved document for each order.':'Chọn ít nhất một chứng từ đã duyệt cho từng đơn hàng.',
+ 'Choose one or more orders. Each order gets its own ZIP in its Drive export folder, with a separate download button. Approved originals and human-verified AI copies are shown separately.':'Chọn một hoặc nhiều đơn hàng. Mỗi đơn hàng có một tệp ZIP trong thư mục xuất của đơn hàng và một nút tải riêng. Chứng từ gốc đã duyệt và bản AI được người phụ trách xác minh hiển thị riêng.',
+ 'Packages above 3 MB download in checked chunks without leaving this page.':'Có thể tải các gói trên 3 MB theo từng phần ngay tại trang này.'
+});

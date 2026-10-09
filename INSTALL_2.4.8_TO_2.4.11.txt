@@ -1,0 +1,10 @@
+KODA EUDR Workspace — cumulative update from installed v2.4.8 to v2.4.11
+Prepared 2026-10-09. This ZIP includes changed files only. It contains all intermediate v2.4.9 and v2.4.10 updates; no separate installation of those versions is required. It also works if v2.4.10 was already installed.
+
+1. Replace the matching paths in your GitHub repository with this archive, preserving their directory names. Keep all other repository files.
+2. In the same Apps Script project, replace each apps_script/*.gs file included in this ZIP, then deploy a NEW Apps Script web-app version. Deploy the GitHub/Netlify update using that new web-app URL if your setup changes deployment URLs. Both current backends and frontend must match.
+3. Keep the existing Sheet, Drive folders, Script Properties, credentials, and source files. This update does not require a new migration.
+4. Generate NEW AI prompts for the v2.4.9–2.4.10 AI changes. The AI session still needs an authorized Drive connection with write access to the destination folder.
+5. In Export, select 1–10 orders. Full Package includes approved active documents for each order. Selected Package uses the checked documents under EACH selected order. Each order produces its own ZIP, Drive export record and Download ZIP button. You may export the same order again; each new run has a distinct ZIP name. If one order fails, its error is shown beside the successfully exported orders.
+
+Local verification: npm run check && npm test && npm run test:pdf
