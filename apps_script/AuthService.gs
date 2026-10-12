@@ -12,18 +12,38 @@ function document_(id,u){const d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===id
 }
 function requireWrite_(u){if(u.role==='VIEWER')fail_('PERMISSION_DENIED','Read-only user');}
 function manageUser(input){const actor=requireRole_(['ADMIN']);return lock_(()=>{
+ if(!Object.prototype.hasOwnProperty.call(rows_('05_OWNER_MASTER')[0]||{},'removed_at'))fail_('SCHEMA_MISMATCH','Run migrateV2414 before editing users');
  const email=String(input.email||'').trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!ROLES_.includes(input.role))fail_('INVALID_INPUT','Invalid email or role');
  if(!['YES','NO'].includes(input.active))fail_('INVALID_INPUT','Invalid active state');
  if(input.role==='SUPPLIER_USER'&&!rows_('14_SUPPLIERS').some(s=>s.id===input.supplier_id&&s.active==='YES'))fail_('INVALID_INPUT','Active supplier required');
  const ids=Array.isArray(input.assigned_orders)?input.assigned_orders:[];if(ids.some(id=>!rows_('01_SO_MASTER').some(c=>c.id===id)))fail_('ORDER_NOT_FOUND','Assignment order missing');
  if(email===actor.email&&(input.active!=='YES'||input.role!=='ADMIN'))fail_('PERMISSION_DENIED','Admin cannot remove own access');
- const old=rows_('05_OWNER_MASTER').find(x=>x.email===email),value={email,name:text_(input.name,200),department:text_(input.department,200),role:input.role,active:input.active,supplier_id:input.role==='SUPPLIER_USER'?input.supplier_id:'',assigned_orders:JSON.stringify(ids)};
+ const old=rows_('05_OWNER_MASTER').find(x=>x.email===email);if(old?.removed_at)fail_('VERSION_CONFLICT','Removed user record needs administrator review before reuse');const value={email,name:text_(input.name,200),department:text_(input.department,200),role:input.role,active:input.active,supplier_id:input.role==='SUPPLIER_USER'?input.supplier_id:'',assigned_orders:JSON.stringify(ids)};
  if(old)patch_('05_OWNER_MASTER',email,value);else add_('05_OWNER_MASTER',{...value,created_at:now_(),created_by:actor.email});
  audit_('USER_SAVED','','',old?JSON.stringify(old):'',JSON.stringify(value),actor.email);return {email};
  });}
 
 function listSuppliers(query){const u=requireCapability_('SUPPLIER_EDIT'),q=text_(query||'',200).toLowerCase();return rows_('14_SUPPLIERS').filter(s=>[s.name,s.supplier_code].some(v=>String(v||'').toLowerCase().includes(q))).slice(0,100);}
 function manageSupplier(input){const u=requireCapability_('SUPPLIER_EDIT');return withOperation_(()=>{const name=text_(input.name||'',200),code=text_(input.supplier_code||'',100),all=rows_('14_SUPPLIERS'),id=input.id||stable_('supplier:'+u.email+':'+BRIDGE_REQUEST_KEY),old=all.find(s=>s.id===id);if(!name)fail_('INVALID_INPUT','Supplier name required');if(input.id&&!old)fail_('INVALID_INPUT','Supplier missing');const norm=s=>String(s||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();const duplicates=all.filter(s=>s.id!==id&&(norm(s.name)===norm(name)||code&&norm(s.supplier_code)===norm(code)));if(duplicates.length)fail_('HUMAN_MAPPING_REQUIRED','Review existing suppliers: '+duplicates.map(s=>s.id).join(', '));const value={name,supplier_code:code,active:input.active||'YES',updated_at:now_(),updated_by:u.email};if(!['YES','NO'].includes(value.active))fail_('INVALID_INPUT','Invalid active state');for(const k of ['address','country','contact_person','email','phone','registration'])value[k]=text_(input[k]||'',500);if(old)patch_('14_SUPPLIERS',id,value);else add_('14_SUPPLIERS',{...value,id,created_at:now_(),created_by:u.email});auditOnce_('SUPPLIER_SAVED','',id,JSON.stringify(old||{}),JSON.stringify(value),u);return {id};});}
+function removeSupplier(id,reason){const u=requireCapability_('SUPPLIER_EDIT');return withOperation_(()=>{
+ const s=rows_('14_SUPPLIERS').find(x=>x.id===id);if(!s)fail_('INVALID_INPUT','Supplier missing');const note=removalReason_(reason);
+ if(rows_('15_SUPPLY_CHAIN').some(n=>n.supplier_id===id)||rows_('02_SO_ITEM_MATERIAL').some(m=>m.supplier_id===id)||rows_('04_EVIDENCE_TRACKER').some(t=>t.supplier_id===id)||rows_('06_DOCUMENT_REGISTER').some(d=>d.supplier_id===id)||rows_('17_GEO_LOCATIONS').some(g=>g.supplier_id===id)||rows_('05_OWNER_MASTER').some(x=>x.supplier_id===id))fail_('REMOVE_SUPPLIER_LINKED','Supplier is linked to relationships, evidence or users; resolve those links first');
+ auditOnce_('SUPPLIER_REMOVED','',id,JSON.stringify(s),JSON.stringify({reason:note}),u);delete_('14_SUPPLIERS',id);return {id};
+ });}
+function prepareRemoveUser(email,reason){const actor=requireRole_(['ADMIN']);return withOperation_(()=>{
+ const target=rows_('05_OWNER_MASTER').find(x=>x.email===email);if(!target||target.removed_at)fail_('INVALID_INPUT','Active user record required');if(target.email===actor.email||target.role==='ADMIN')fail_('PERMISSION_DENIED','Admin accounts cannot be removed here');const note=removalReason_(reason);
+ if(!Object.prototype.hasOwnProperty.call(target,'removed_at'))fail_('SCHEMA_MISMATCH','Run migrateV2414 before removing a user');
+ if(rows_('01_SO_MASTER').some(c=>c.owner===email)||rows_('04_EVIDENCE_TRACKER').some(t=>t.status!=='APPROVED'&&(t.owner===email||t.assigned_reviewer===email))||rows_('23_UPLOAD_SESSIONS').some(s=>s.actor===email&&s.status==='UPLOADING'))fail_('REMOVE_USER_ASSIGNED','Reassign open orders, tasks and uploads before removing this user');
+ if(target.active!=='NO')patch_('05_OWNER_MASTER',email,{active:'NO'});
+ auditOnce_('USER_REMOVAL_PREPARED','',email,JSON.stringify(target),JSON.stringify({reason:note,active:'NO'}),actor);return {email,auth_uid:target.auth_uid||''};
+ });}
+function removeUser(email,reason){const actor=requireRole_(['ADMIN']);return withOperation_(()=>{
+ const target=rows_('05_OWNER_MASTER').find(x=>x.email===email);if(!target||target.removed_at||target.role==='ADMIN'||target.email===actor.email||target.active!=='NO')fail_('VERSION_CONFLICT','User is not ready for removal');const note=removalReason_(reason);
+ if(!Object.prototype.hasOwnProperty.call(target,'removed_at'))fail_('SCHEMA_MISMATCH','Run migrateV2414 before removing a user');
+ if(rows_('01_SO_MASTER').some(c=>c.owner===email)||rows_('04_EVIDENCE_TRACKER').some(t=>t.status!=='APPROVED'&&(t.owner===email||t.assigned_reviewer===email)))fail_('REMOVE_USER_ASSIGNED','Reassign open orders and tasks before removing this user');
+ if(target.auth_uid){const audit=rows_('08_ACTIVITY_LOG').filter(a=>a.entity_id===email&&['AUTH_ACCOUNT_DISABLED','AUTH_ACCOUNT_ENABLED'].includes(a.action)).sort((a,b)=>String(a.timestamp).localeCompare(String(b.timestamp)));if(audit.at(-1)?.action!=='AUTH_ACCOUNT_DISABLED')fail_('REMOVE_USER_LOGIN','Disable the Firebase login before removing this user');}
+ const value={active:'NO',removed_at:now_(),removed_by:actor.email,assigned_orders:'[]'};patch_('05_OWNER_MASTER',email,value);auditOnce_('USER_REMOVED','',email,JSON.stringify(target),JSON.stringify({reason:note,...value}),actor);return {email};
+ });}
 function saveSettings(input){const u=requireRole_(['ADMIN']);const allowed=['RULES_CONFIRMED','LEGAL_RULE_VERSION','ANNEX_I_VERSION','COUNTRY_RISK_VERSION','LAST_LEGAL_REVIEW_DATE','LEGAL_REVIEWED_BY','LEGAL_REVIEW_MAX_DAYS','LEGAL_RULE_SOURCE_URL','ANNEX_I_SOURCE_URL','COUNTRY_RISK_SOURCE_URL','GEO_MIN_DECIMALS','GEO_POLYGON_THRESHOLD_HA'];return lock_(()=>{
  Object.keys(input).forEach(k=>{if(!allowed.includes(k))fail_('PERMISSION_DENIED','Setting not writable');});
  if(input.LAST_LEGAL_REVIEW_DATE)isoDate_(input.LAST_LEGAL_REVIEW_DATE);if(input.LEGAL_REVIEW_MAX_DAYS&&(!Number.isFinite(Number(input.LEGAL_REVIEW_MAX_DAYS))||Number(input.LEGAL_REVIEW_MAX_DAYS)<=0))fail_('INVALID_INPUT','Review interval must be positive');
@@ -47,7 +67,7 @@ function authProvisionCheck(email){const admin=requireRole_(['ADMIN']),target=ro
 function authProvisioned(email,uid){const admin=requireRole_(['ADMIN']),target=rows_('05_OWNER_MASTER').find(x=>x.email===email&&x.active==='YES');if(!target||target.auth_uid||!/^.{10,128}$/.test(uid))fail_('INVALID_INPUT','Provisioning state mismatch');
  return lock_(()=>{patch_('05_OWNER_MASTER',email,{auth_provider:'FIREBASE',auth_uid:uid,must_change_password:'YES',password_changed_at:''});audit_('AUTH_ACCOUNT_PROVISIONED','','','','Firebase account provisioned for '+email,admin.email);return true;});}
 function authAccountStateCheck(email,enabled){requireRole_(['ADMIN']);const target=rows_('05_OWNER_MASTER').find(x=>x.email===email&&x.auth_uid);if(!target||target.active!==(enabled?'YES':'NO'))fail_('INVALID_INPUT','Owner active state mismatch');return {uid:target.auth_uid};}
-function authAccountStateRecorded(email,enabled){const admin=requireRole_(['ADMIN']);audit_(enabled?'AUTH_ACCOUNT_ENABLED':'AUTH_ACCOUNT_DISABLED','','','','Firebase account '+email,admin.email);return true;}
+function authAccountStateRecorded(email,enabled){const admin=requireRole_(['ADMIN']);audit_(enabled?'AUTH_ACCOUNT_ENABLED':'AUTH_ACCOUNT_DISABLED','',email,'','Firebase account '+email,admin.email);return true;}
 // One-time staging/production bootstrap from the Apps Script editor, not exposed by the bridge.
 function bootstrapFirebaseAdmin(uid){const email=Session.getEffectiveUser().getEmail().trim().toLowerCase(),row=rows_('05_OWNER_MASTER').find(x=>x.email===email&&x.role==='ADMIN'&&x.active==='YES');
  if(!row||row.auth_uid||!/^.{10,128}$/.test(String(uid||'')))throw Error('Bootstrap requires an existing active ADMIN without Firebase UID');
@@ -66,6 +86,6 @@ function capabilities_(u){
 }
 function hasCapability_(u,cap){return capabilities_(u).includes(cap);}
 function requireCapability_(cap){const u=user_();if(!hasCapability_(u,cap))fail_('PERMISSION_DENIED','Required capability: '+cap);return u;}
-function salesOrderDerived_(d){const seen=new Set();while(d){if(d.kind==='SO'||d.document_type==='Sales order')return true;if(seen.has(d.id))return true;seen.add(d.id);if(!d.source_document_id)return false;d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===d.source_document_id);if(!d)return true;}return false;}
-function documentVisible_(d,u){return !salesOrderDerived_(d)||hasCapability_(u,'SO_VIEW');}
+function salesOrderDerived_(d){const seen=new Set();while(d){if(d.kind==='SO'||d.kind==='SO_IMPORT'||d.document_type==='Sales order')return true;if(seen.has(d.id))return true;seen.add(d.id);if(!d.source_document_id)return false;d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===d.source_document_id);if(!d)return true;}return false;}
+function documentVisible_(d,u){if(['DOSSIER','DOSSIER_PART'].includes(d.kind))return !['SUPPLIER_USER','VIEWER'].includes(u.role)&&(hasCapability_(u,'AI_USE')||hasCapability_(u,'EVIDENCE_UPLOAD'));return !salesOrderDerived_(d)||hasCapability_(u,'SO_VIEW');}
 function grantCapabilities(input){const actor=requireRole_(['ADMIN']);if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Explicit capability assignment required');return withOperation_(()=>{const target=rows_('05_OWNER_MASTER').find(x=>x.email===input.email);if(!target||['ADMIN','SUPPLIER_USER'].includes(target.role)||!Array.isArray(input.capabilities)||input.capabilities.some(x=>!CAPABILITIES_.includes(x)||x==='SO_VIEW'))fail_('INVALID_INPUT','Invalid capability assignment');const value=JSON.stringify([...new Set(input.capabilities)]);patch_('05_OWNER_MASTER',target.email,{capabilities:value});audit_('CAPABILITIES_GRANTED','',target.email,target.capabilities||'[]',value,actor.email);return {email:target.email};});}

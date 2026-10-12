@@ -1,16 +1,21 @@
 {
   "name": "koda-eudr-workspace",
   "private": true,
-  "version": "2.4.11-staging-candidate",
+  "version": "2.6.0-staging-candidate",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check public/app.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs",
+    "check": "node --check public/app.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs && node --check public/dossier.js && node --check public/smart-import.js && node --check public/ocr-import.mjs",
     "test:pdf": "python -m unittest discover -s tests -p 'test_*.py' -v",
     "test:browser": "node tests/browser-v22.mjs"
   },
   "dependencies": {
-    "firebase-admin": "^13.5.0"
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/vie": "1.0.0",
+    "exceljs": "4.4.0",
+    "firebase-admin": "^13.5.0",
+    "pdf-lib": "1.17.1",
+    "tesseract.js": "7.0.0"
   },
   "engines": {
     "node": ">=20"

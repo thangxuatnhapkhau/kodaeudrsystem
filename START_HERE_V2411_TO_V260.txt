@@ -1,0 +1,95 @@
+KODA EUDR — NÂNG TRỰC TIẾP v2.4.11 → v2.6.0
+
+BẢN NGUỒN CỦA BẠN
+https://drive.google.com/drive/folders/1Oor5NGURZRo41wfXpBWDKTlHQC_mcJRY
+package.json: 2.4.11-staging-candidate
+INSTALL_2.4.11_FULL.txt: COMPLETE SOURCE v2.4.11
+Đã đối chiếu Code.gs/Migration.gs từ chính thư mục này.
+
+Dùng toàn bộ gói v2.6.0. Không cần cài riêng v2.4.13, v2.4.16 hoặc v2.5.0 trước.
+Không chỉ thay public/app.js: frontend, Netlify bridge và Apps Script phải cùng phiên bản.
+
+1. SAO LƯU
+Sao lưu Google Sheet, Apps Script source và revision GitHub đang chạy.
+Giữ dự án Apps Script, workbook, Drive root, Calendar và cấu hình hiện tại.
+Không tạo workbook mới, không chạy hàm setup/khởi tạo lại hệ thống.
+
+2. SOURCE REPOSITORY
+Sau giải nén, mở thư mục KODA_EUDR_v260.
+Copy NỘI DUNG bên trong vào gốc repository hiện tại, đúng đường dẫn:
+apps_script/, public/, netlify/, tests/, tools/, package.json,
+package-lock.json, netlify.toml.
+Không đưa nguyên thư mục KODA_EUDR_v260 thành một thư mục con của repository.
+Giữ nguyên toàn bộ public/vendor và public/templates.
+Chuẩn bị source trên nhánh/commit chưa deploy; deploy frontend sau backend/migration.
+
+3. SOURCE APPS SCRIPT
+Trong dự án hiện tại, thay các .gs tương ứng từ apps_script/ và appsscript.json.
+Thêm 3 file mới: DossierService.gs, SmartImportService.gs, AIService.gs.
+Không sửa hoặc ghi đè Script Properties.
+
+4. MIGRATION TỪ v2.4.11 — THEO ĐÚNG THỨ TỰ
+Chạy bằng account deploying đang là ADMIN active trong 05_OWNER_MASTER.
+Apps Script editor không nhập đối số trực tiếp ở nút Run. Tạo file tạm
+UpgradeHelper.gs, dán hai hàm dưới, lưu rồi chọn tên hàm trong dropdown:
+
+function previewUpgradeV2411ToV260() {
+  console.log(JSON.stringify({
+    owner: migrateV2414(true),
+    dossier: migrateV25(true),
+    smartImport: migrateV26(true)
+  }, null, 2));
+}
+
+function applyUpgradeV2411ToV260() {
+  console.log(JSON.stringify(migrateV2414(false)));
+  console.log(JSON.stringify(migrateV25(false)));
+  console.log(JSON.stringify(migrateV26(false)));
+}
+
+Chạy previewUpgradeV2411ToV260 trước, đọc Execution log, rồi mới chạy
+applyUpgradeV2411ToV260. Có SCHEMA_MISMATCH thì dừng và kiểm tra header;
+không xóa sheet, không đổi tên/cột theo phỏng đoán.
+
+Thay đổi kỳ vọng với workbook đã dùng đầy đủ v2.4.11:
+- 05_OWNER_MASTER: thêm removed_at, removed_by ở cuối.
+- 24_SO_PRODUCTS: thêm import_line_no, import_source_document_id ở cuối.
+- Tạo 25_DOSSIER_UPLOADS, 26_DOSSIER_CHECKS, 27_IMPORT_PREVIEWS, 28_AI_JOBS.
+- 25_DOSSIER_UPLOADS mới tạo đã có upload_kind vì dùng toàn bộ source v2.6.0.
+- Không ghi đè các dòng Order, product, material, evidence hay user hiện có.
+
+Không cần chạy lại migrateV2/migrateV21/migrateV22/migrateV23/migrateV24
+nếu workbook đã được triển khai và sử dụng đầy đủ v2.4.11.
+Sau khi xong, có thể xóa file UpgradeHelper.gs tạm.
+
+5. API / WORKER
+OCR, đọc layout KODA và import Excel không cần Gemini API key.
+Để dùng nút LLM, thêm GEMINI_API_KEY và AI_ENABLED=true trong Script Properties;
+xem INSTALL_V2.6.0_VI.md cho model và giới hạn.
+Chạy installAIWorker() từ editor bằng deploying Admin; chỉ một account cài.
+Giữ DB_ID, ROOT_ID, CALENDAR_ID, BRIDGE_SECRET, ALLOWED_ORIGINS hiện tại.
+Không đặt Gemini key trong public/, GitHub, Sheet hoặc Netlify frontend.
+
+6. DEPLOY
+Apps Script: Deploy → Manage deployments → Edit → New version → Deploy.
+Dùng cùng deployment để giữ URL /exec; nếu đổi URL, cập nhật
+APPS_SCRIPT_WEBAPP_URL trên Netlify.
+Sau khi backend/migration sẵn sàng, push/merge source để Netlify deploy
+repository hiện tại. Xác nhận footer STAGING 2.6.0.
+
+7. KIỂM TRA TRÊN HỆ THỐNG THẬT
+- Admin vẫn tạo New Order, bốn block chứng từ còn đủ.
+- Order cũ, file cũ, trạng thái duyệt và liên kết Drive còn nguyên.
+- Marketing thấy đúng Order và task Calendar liên quan.
+- Trích một SO thật: SKU theo PO# từng S/No, tên product, qty/UOM/material.
+- Import template Excel: nhiều material cùng product không cộng trùng qty.
+- Nếu bật LLM: một job thật về preview/review queue; kiểm tra trước xác nhận.
+- Export lại cùng Order và export nhiều Order hoạt động đúng.
+Danh sách acceptance đầy đủ có trong INSTALL_V2.6.0_VI.md.
+
+KẾT QUẢ ĐÃ KIỂM TRA
+Source v2.6.0: 178/178 automated tests đã đạt.
+Mô phỏng riêng schema v2.4.11 → v2.6.0: PASS, dry-run không ghi,
+business rows giữ nguyên, chạy migration lại không thay đổi.
+Chi tiết: release/UPGRADE_V2411_CHECK.json.
+Chưa chạy migration/deploy trên workbook/website thật, chưa gọi Gemini thật.

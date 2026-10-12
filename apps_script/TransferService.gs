@@ -1,5 +1,5 @@
 // Durable 1 MiB chunks avoid per-request limits for files below the 3 MB upload cap.
-const TRANSFER_CHUNK_=1024*1024,MAX_TRANSFER_=25*1024*1024;
+const TRANSFER_CHUNK_=1024*1024,MAX_TRANSFER_=100000000;
 function beginUpload(taskId,metadata){const u=requireCapability_('EVIDENCE_UPLOAD');const t=task_(taskId,u),size=Number(metadata.size);if(t.evidence==='Sales order'||!['MISSING','DRAFT','UPLOADED','REJECTED','MORE_INFO_REQUIRED'].includes(t.status))fail_('PERMISSION_DENIED','Upload not permitted in this task state');
  if(!Number.isSafeInteger(size)||size<1||! /^[a-f0-9]{64}$/.test(metadata.sha256||''))fail_('INVALID_FILE','Valid size and SHA-256 required');
  if(size>=MAX_FILE_BYTES_)fail_('FILE_TOO_LARGE','File must be less than 3 MB');
@@ -22,7 +22,7 @@ function finishUpload(sessionId){const u=user_();requireWrite_(u);const s=upload
  try{const file={name:s.name,type:s.mime_type,data:Utilities.base64Encode(bytes),expected_document_id:s.expected_document_id};result=s.kind==='EVIDENCE'?uploadEvidence(s.task_id,file):uploadProcessed(s.source_document_id,s.kind,file);}finally{BRIDGE_REQUEST_KEY=key;BRIDGE_ARGS=args;}
  patch_('23_UPLOAD_SESSIONS',s.id,{status:'DONE',document_id:result.id});return result;
 }
-function downloadFile_(id,u){if(String(id).startsWith('export:')){const ex=rows_('19_EXPORT_LOG').find(x=>x.id===String(id).slice(7));if(!ex)fail_('FILE_NOT_FOUND','Export missing');order_(ex.case_id,u);if(u.role==='SUPPLIER_USER'||ex.include_history==='YES'&&u.role!=='ADMIN')fail_('PERMISSION_DENIED','Export access denied');authorizeExport_(ex,u);return DriveApp.getFileById(ex.file_id);}return DriveApp.getFileById(document_(id,u).file_id);}
+function downloadFile_(id,u){if(String(id).startsWith('export:')){const ex=rows_('19_EXPORT_LOG').find(x=>x.id===String(id).slice(7));if(!ex)fail_('FILE_NOT_FOUND','Export missing');order_(ex.case_id,u);if(u.role==='SUPPLIER_USER'||ex.include_history==='YES'&&u.role!=='ADMIN')fail_('PERMISSION_DENIED','Export access denied');authorizeExport_(ex,u);const file=DriveApp.getFileById(ex.file_id);if(file.isTrashed())fail_('EXPORT_ORPHANED_EVIDENCE','Export ZIP was retired');return file;}return DriveApp.getFileById(document_(id,u).file_id);}
 function getDocumentChunk(id,index){const u=user_(),f=downloadFile_(id,u),size=f.getSize(),chunks=Math.ceil(size/TRANSFER_CHUNK_);if(!Number.isInteger(index)||index<0||index>=chunks||size>MAX_TRANSFER_)fail_('INVALID_INPUT','Invalid download chunk or size');
  const start=index*TRANSFER_CHUNK_,end=Math.min(size-1,start+TRANSFER_CHUNK_-1),url='https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(f.getId())+'?alt=media';
  const response=UrlFetchApp.fetch(url,{headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken(),Range:'bytes='+start+'-'+end},muteHttpExceptions:true});

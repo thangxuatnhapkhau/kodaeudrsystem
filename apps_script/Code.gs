@@ -76,6 +76,7 @@ function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));con
 function safe_(v){return typeof v==='string' && /^[=+@\-]/.test(v)?"'"+v:v;}
 function add_(n,o){delete TABLE_CACHE_[n];db_().getSheetByName(n).appendRow(SCHEMA[n].map(k=>safe_(o[k]===undefined?'':o[k])));}
 function patch_(n,id,o){delete TABLE_CACHE_[n];const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');Object.keys(o).forEach(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');s.getRange(i+1,col+1).setValue(safe_(o[k]));});}
+function delete_(n,id){delete TABLE_CACHE_[n];const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');s.deleteRow(i+1);}
 function uid_(){return Utilities.getUuid();}
 function now_(){return new Date().toISOString();}
 function user_(){

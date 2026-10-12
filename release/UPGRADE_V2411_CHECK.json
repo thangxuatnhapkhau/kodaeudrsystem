@@ -1,0 +1,146 @@
+{
+  "baseline_version": "2.4.11-staging-candidate",
+  "source_folder": "https://drive.google.com/drive/folders/1Oor5NGURZRo41wfXpBWDKTlHQC_mcJRY",
+  "validation": "PASS",
+  "old_table_prefixes": "PASS",
+  "dry_run_no_writes": "PASS",
+  "business_rows_preserved": "PASS",
+  "repeat_no_changes": "PASS",
+  "live_database": "NOT_RUN",
+  "source_hashes": {
+    "Code.gs": "acfd3c2b5561b712d044bd1e2f778e98a32422d9dda9d59c1fd0c65c08766f07",
+    "Migration.gs": "2bea06d532ef6f2e943de6005fd3d9f6de84ba0f63dca78cb660343cfde33061",
+    "OrderService.gs": "32452f14ef00f9b1d43a74a3e117f350b06ff87d2e715d5359b67b625fa8ca00",
+    "AuthService.gs": "459b5c3290c35ca80ea096e74e8d1740567574095538733b51e3ab6ad7f52f9f"
+  },
+  "plans": [
+    {
+      "function": "migrateV2414",
+      "preview": {
+        "version": "2.4.14",
+        "dry_run": true,
+        "tab": "05_OWNER_MASTER",
+        "add": [
+          "removed_at",
+          "removed_by"
+        ],
+        "records_changed": 0
+      }
+    },
+    {
+      "function": "migrateV25",
+      "preview": {
+        "dryRun": true,
+        "plan": [
+          {
+            "table": "25_DOSSIER_UPLOADS",
+            "create": true,
+            "columns": [
+              "id",
+              "actor",
+              "case_id",
+              "name",
+              "size",
+              "sha256",
+              "folder_id",
+              "status",
+              "created_at",
+              "expires_at",
+              "document_id",
+              "source_document_id",
+              "source_page_range",
+              "evidence_block",
+              "review_run_id",
+              "section_id",
+              "upload_kind"
+            ]
+          },
+          {
+            "table": "26_DOSSIER_CHECKS",
+            "create": true,
+            "columns": [
+              "id",
+              "case_id",
+              "document_id",
+              "source_sha256",
+              "context_sha256",
+              "prompt_run_id",
+              "result_sha256",
+              "result_json",
+              "status",
+              "created_at",
+              "imported_at"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "function": "migrateV26",
+      "preview": {
+        "dryRun": true,
+        "plan": [
+          {
+            "table": "24_SO_PRODUCTS",
+            "create": false,
+            "existing": 13,
+            "append": [
+              "import_line_no",
+              "import_source_document_id"
+            ]
+          },
+          {
+            "table": "25_DOSSIER_UPLOADS",
+            "create": false,
+            "existing": 17,
+            "append": []
+          },
+          {
+            "table": "27_IMPORT_PREVIEWS",
+            "create": true,
+            "existing": 0,
+            "append": [
+              "id",
+              "actor",
+              "case_id",
+              "source_document_id",
+              "source_type",
+              "preview_json",
+              "preview_hash",
+              "snapshot_hash",
+              "status",
+              "created_at",
+              "result_json",
+              "source_job_id"
+            ]
+          },
+          {
+            "table": "28_AI_JOBS",
+            "create": true,
+            "existing": 0,
+            "append": [
+              "id",
+              "actor",
+              "case_id",
+              "source_document_id",
+              "source_sha256",
+              "type",
+              "prompt_run_id",
+              "input_file_id",
+              "input_sha256",
+              "status",
+              "created_at",
+              "started_at",
+              "finished_at",
+              "result_file_id",
+              "error_code",
+              "usage_json",
+              "context_hash",
+              "model"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -146,3 +146,21 @@ function migrateV24(dryRun){
   return {...plan,dry_run:false,folders_created:missingFolders,tasks_remapped:remap.length,tasks_created:created};
  });
 }
+
+// V2.4.14: retain disabled user audit history while hiding removed accounts from the workspace.
+const V2414_OWNER_BASE_=SCHEMA['05_OWNER_MASTER'].slice();
+SCHEMA['05_OWNER_MASTER']=SCHEMA['05_OWNER_MASTER'].concat(['removed_at','removed_by']);
+function migrateV2414(dryRun){
+ const email=Session.getEffectiveUser().getEmail().toLowerCase();
+ if(!rows_('05_OWNER_MASTER').some(u=>u.email===email&&u.role==='ADMIN'&&u.active==='YES'))fail_('PERMISSION_DENIED','Existing deploying Admin required');
+ return lock_(()=>{
+  const sheet=db_().getSheetByName('05_OWNER_MASTER'),expected=SCHEMA['05_OWNER_MASTER'];
+  if(!sheet)fail_('SCHEMA_MISMATCH','Owner master missing');
+  const actual=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+  if(actual.length<V2414_OWNER_BASE_.length||actual.length>expected.length||actual.some((h,i)=>h!==expected[i]))fail_('SCHEMA_MISMATCH','Owner master headers changed');
+  const add=expected.slice(actual.length),plan={version:'2.4.14',dry_run:dryRun!==false,tab:'05_OWNER_MASTER',add,records_changed:0};
+  if(dryRun!==false)return plan;
+  if(add.length){if(sheet.getMaxColumns()<expected.length)sheet.insertColumnsAfter(sheet.getMaxColumns(),expected.length-sheet.getMaxColumns());sheet.getRange(1,actual.length+1,1,add.length).setValues([add]);sheet.setFrozenRows(1);delete TABLE_CACHE_['05_OWNER_MASTER'];audit_('SCHEMA_MIGRATED','','','',JSON.stringify({version:'2.4.14',columns:add.length}),email);}
+  return {...plan,dry_run:false,columns:add.length};
+ });
+}
