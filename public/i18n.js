@@ -339,6 +339,16 @@ Object.assign(v27Labels,{
  'Select at least one PDF for this material.':'Chọn ít nhất một PDF của material này.',
  'PDFs are ready. PO/line/lot can be added later.':'PDF đã sẵn sàng. PO/line/lot còn thiếu có thể bổ sung sau.'
 });
+Object.assign(v27Labels,{
+ 'The Drive result was saved for reference. Order evidence changed after the prompt; findings were not queued and PDF splitting is disabled. Create a fresh check for current actions.':'Đã lưu kết quả từ Drive để tham khảo. Chứng từ của Order thay đổi sau khi tạo prompt; hệ thống không đưa nhận xét vào hàng chờ và không cho tách PDF. Tạo lượt kiểm tra mới trước khi thực hiện hành động.'
+});
+Object.assign(v27Labels,{
+ 'Create a material review prompt from selected PDFs':'Tạo prompt đánh giá material từ PDF đã chọn',
+ 'Run OCR + AI for selected PDFs':'Chạy OCR + AI cho PDF đã chọn',
+ 'Create a material review prompt':'Tạo prompt đánh giá material',
+ 'Upload documents for this material':'Upload chứng từ cho material',
+ 'The web and backend versions differ. Deploy the Netlify function and Apps Script bridge from this update, then reopen this dossier. Your uploaded PDFs remain in Drive.':'Phiên bản web và backend chưa đồng bộ. Cập nhật Netlify Function và Apps Script bridge trong gói này, sau đó mở lại dossier. PDF đã upload vẫn ở Drive.'
+});
 Object.assign(translations.vi,v27Labels);
 Object.entries(v27Labels).forEach(([en,vi])=>{translations.en[vi]=en;});
 const v27Vietnamese=new Set(Object.values(v27Labels));

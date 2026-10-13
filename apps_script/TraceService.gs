@@ -58,10 +58,11 @@ function prepareMaterialReviewSource(materialId,documentIds){
  const u=user_();if(!hasCapability_(u,'EVIDENCE_UPLOAD')&&!hasCapability_(u,'AI_USE'))fail_('PERMISSION_DENIED','Dossier upload or AI permission required');traceInternal_(u);
  return withOperation_(()=>{const {m,c}=traceMaterial_(materialId,u);traceWritable_(c);
   if(!Array.isArray(documentIds)||!documentIds.length||documentIds.length>20||new Set(documentIds).size!==documentIds.length)fail_('INVALID_INPUT','Select 1–20 different PDFs');
-  const docs=documentIds.map(id=>{const d=document_(id,u);if(d.case_id!==c.id||d.material_id!==m.id||d.source_id||d.kind!=='DOSSIER'||d.active_version!=='YES'||d.mime_type!=='application/pdf')fail_('INVALID_INPUT','Only unassigned current PDFs for this material can start a preliminary review');return d;});
   const id=stable_('preliminary-material-source:'+m.id+':'+documentIds.slice().sort().join(':')),existing=rows_('29_MATERIAL_SOURCES').find(s=>s.id===id);
+  if(existing&&(existing.case_id!==c.id||existing.material_id!==m.id||existing.active==='NO'))fail_('VERSION_CONFLICT','Preliminary source changed');
+  const docs=documentIds.map(documentId=>{const d=document_(documentId,u);if(d.case_id!==c.id||d.material_id!==m.id||d.source_id&&d.source_id!==id||d.kind!=='DOSSIER'||d.active_version!=='YES'||d.mime_type!=='application/pdf')fail_('INVALID_INPUT','Only current PDFs for this material and selected preliminary group can be reviewed');return d;});
   if(!existing)add_('29_MATERIAL_SOURCES',{id,case_id:c.id,material_id:m.id,supplier_id:'',supplier_po:'',po_line:'',lot_no:'',quantity:'',quantity_uom:'',production_country:'',harvest_start:'',harvest_end:'',active:'YES',created_at:now_(),created_by:u.email,updated_at:now_(),updated_by:u.email});
-  docs.forEach(d=>patch_('06_DOCUMENT_REGISTER',d.id,{source_id:id}));
+  docs.filter(d=>!d.source_id).forEach(d=>patch_('06_DOCUMENT_REGISTER',d.id,{source_id:id}));
   auditOnce_('MATERIAL_PRELIMINARY_SOURCE',c.id,id,'',JSON.stringify({material_id:m.id,document_ids:documentIds,identity:'UNVERIFIED'}),u);return {id,document_ids:documentIds,provisional:true};
  });
 }
