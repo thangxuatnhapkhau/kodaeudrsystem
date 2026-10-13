@@ -28,8 +28,52 @@ export async function readPDF(file,{signal,progress=()=>{},maxPages=300,maxChars
   return {sha256,page_count:pdf.numPages,pages};
  }finally{signal?.removeEventListener('abort',stop);await Promise.all([terminateOCR(),destroyPDF()]);}
 }
-export function category(name){const wood=/WOOD|TIMBER|WALNUT|OAK|ACACIA|BEECH|VENEER|PLYWOOD|MDF|LVL|GỖ/i.test(name),nonwood=/METAL|FABRIC|LEATHER|FELT|FOAM|STEEL|ALUMIN|VẢI|KIM LOẠI/i.test(name);if(wood&&nonwood)return 'UNKNOWN';if(/\bLVL\b/i.test(name))return 'OTHER_WOOD';if(/\bMDF\b/i.test(name))return 'MDF';if(/PLYWOOD/i.test(name))return 'PLYWOOD';if(/VENEER/i.test(name))return 'VENEER';if(/SOLID|GỖ\s*(TỰ NHIÊN|ĐẶC)/i.test(name))return 'SOLID_WOOD';if(/METAL|FABRIC|LEATHER|FELT|FOAM|STEEL|ALUMIN|VẢI|KIM LOẠI/i.test(name))return 'NON_WOOD';if(/WOOD|WALNUT|OAK|ACACIA|BEECH|RUBBERWOOD|GỖ/i.test(name))return 'OTHER_WOOD';return 'UNKNOWN';}
-export function parseLocalKoda(packet,orderNo){const identified=[...new Set(packet.pages.flatMap(p=>p.text.match(/\bSO\d{2}-\d+\b/gi)||[]).map(x=>x.toUpperCase()))];if(identified.length&&(!identified.includes(orderNo.toUpperCase())||identified.length>1))throw Error('Order No. trong PDF không khớp hoặc có nhiều Order. Kiểm tra lại file.');const lines=packet.pages.flatMap(p=>p.text.split(/\r?\n/).map(text=>({text:text.trim(),page:p.page}))).filter(x=>x.text),starts=lines.map((x,i)=>/^\d+\.\s+\S/.test(x.text)?i:-1).filter(i=>i>=0);const products=[];for(let i=0;i<starts.length;i++){const block=lines.slice(starts[i],starts[i+1]??lines.length),skuMatches=block.map(x=>x.text.match(/\bPO\s*#\s*[:：]?\s*([A-Za-z0-9][A-Za-z0-9._/-]*)/i)).filter(Boolean);if(skuMatches.length!==1)throw Error('PO# trong một block bị thiếu hoặc không rõ. Dùng AI hoặc sửa preview.');const qty=block.map(x=>x.text.match(/(?:^|\s)(\d+(?:,\d{3})*(?:\.\d+)?)\s+(Each|EA|Pcs?|Pieces?|Sets?)\b/i)).find(Boolean);if(!qty)throw Error('Không xác định được quantity theo block. Dùng AI hoặc nhập Excel.');const name=(block[1]?.text||'').replace(/\s+\d+(?:,\d{3})*(?:\.\d+)?\s+(Each|EA|Pcs?|Pieces?|Sets?)\b.*$/i,'').trim();if(!name)throw Error('Product ở dòng thứ hai bị thiếu.');const materials=block.slice(2).filter(x=>/SOLID|VENEER|\bMDF\b|PLYWOOD|RUBBERWOOD|METAL|FABRIC|LEATHER|FELT|FOAM/i.test(x.text)&&!/^REMARK|^CUSTOMER|^SHIP|^TOTAL|^CONCEPT|^EAN|^PO\s*#/i.test(x.text)).map(x=>({name:x.text.slice(0,150),category:category(x.text),scientific_name:'',source_reference:`PDF page ${x.page}, S/No ${block[0].text.match(/^\d+/)[0]}`}));products.push({line_no:block[0].text.match(/^\d+/)[0],sku:skuMatches[0][1],product_name:name,quantity:Number(qty[1].replaceAll(',','')),quantity_uom:qty[2],source_reference:`PDF page ${block[0].page}, S/No ${block[0].text.match(/^\d+/)[0]}`,materials:[...new Map(materials.map(m=>[m.name,m])).values()]});}if(!products.length)throw Error('Chưa nhận dạng được layout S/No của KODA. Chọn trích xuất AI hoặc dùng Excel template.');return {order_no:orderNo,products};}
+export function category(name){
+ const value=String(name||'').normalize('NFKC').replace(/\bS0LID\b/gi,'SOLID');
+ const species=/\b(?:OAK|WALNUT|ASH|BEECH|ACACIA|RUBBER[\s-]*WOOD)\b|GỖ/i.test(value);
+ const laminatedVeneerLumber=/LAMINATED\s+VENEER\s+LUMBER/i.test(value);
+ const engineered={MDF:/\bMDF\b/i.test(value),PLYWOOD:/\bPLY[\s-]*WOOD\b/i.test(value),LVL:/\bLVL\b/i.test(value)||laminatedVeneerLumber,VENEER:/\bVENEER\b/i.test(value)&&!laminatedVeneerLumber};
+ const solid=/\bSOLID\b|GỖ\s*(?:TỰ NHIÊN|ĐẶC)/i.test(value)&&species;
+ const nonwood=/\b(?:METAL|FABRIC|LEATHER|FELT|FOAM|STEEL|ALUMINI?UM|PLASTIC|GLASS)\b|VẢI|KIM LOẠI/i.test(value);
+ const wood=species||solid||Object.values(engineered).some(Boolean)||/\b(?:WOOD|TIMBER)\b/i.test(value);
+ if(wood&&nonwood)return 'UNKNOWN';
+ const types=Object.entries(engineered).filter(([,present])=>present).map(([type])=>type);
+ if(solid)types.push('SOLID_WOOD');
+ if(types.length>1)return 'UNKNOWN';
+ if(types.length)return types[0];
+ if(nonwood)return 'NON_WOOD';
+ return wood?'OTHER_WOOD':'UNKNOWN';
+}
+export function parseLocalKoda(packet,orderNo){
+ const identified=[...new Set(packet.pages.flatMap(p=>p.text.match(/\bSO\d{2}-\d+\b/gi)||[]).map(x=>x.toUpperCase()))];
+ if(identified.length&&(!identified.includes(orderNo.toUpperCase())||identified.length>1))throw Error('Order No. trong PDF không khớp hoặc có nhiều Order. Kiểm tra lại file.');
+ const lines=packet.pages.flatMap(p=>p.text.split(/\r?\n/).map(text=>({text:text.trim(),page:p.page}))).filter(x=>x.text);
+ const starts=lines.map((x,i)=>/^\d+\.\s+\S/.test(x.text)?i:-1).filter(i=>i>=0),products=[];
+ for(let i=0;i<starts.length;i++){
+  const block=lines.slice(starts[i],starts[i+1]??lines.length),lineNo=block[0].text.match(/^\d+/)[0];
+  const poLines=block.filter(x=>/^PO\s*#\s*[:：]?\s*[A-Za-z0-9]/i.test(x.text));
+  if(!poLines.length)throw Error(`S/No ${lineNo}: thiếu PO# trong block. Dùng AI hoặc sửa preview.`);
+  const first=block[0].text.replace(/^\d+\.\s*/,'').trim(),explicitSku=first.match(/^([A-Za-z0-9][A-Za-z0-9._/-]*)\b/);
+  const allocations=poLines.map(x=>{
+   const m=x.text.match(/^PO\s*#\s*[:：]?\s*([A-Za-z0-9][A-Za-z0-9._/-]*)\s*-\s*(.*?)\s*-\s*QTY\s*[:：]?\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(Pcs?|Pieces?|Each|EA|Sets?)\b/i);
+   if(!m){if(poLines.length>1||/\bQTY\b/i.test(x.text))throw Error(`S/No ${lineNo}: không đọc được PO# và quantity phân bổ. Kiểm tra PDF.`);return null;}
+   return {po_no:m[1],destination:m[2].trim(),quantity:Number(m[3].replaceAll(',','')),quantity_uom:m[4],source_reference:`PDF page ${x.page}, S/No ${lineNo}`};
+  }).filter(Boolean);
+  if(poLines.length>1&&!explicitSku)throw Error(`S/No ${lineNo}: nhiều PO# nhưng thiếu mã product/SKU ở đầu block.`);
+  const sku=allocations.length?explicitSku?.[1]:poLines[0].text.match(/^PO\s*#\s*[:：]?\s*([A-Za-z0-9][A-Za-z0-9._/-]*)/i)?.[1];
+  const qty=block[0].text.match(/(?:^|\s)(\d+(?:,\d{3})*(?:\.\d+)?)\s+(Each|EA|Pcs?|Pieces?|Sets?)\b/i)||block.slice(1).map(x=>x.text.match(/(?:^|\s)(\d+(?:,\d{3})*(?:\.\d+)?)\s+(Each|EA|Pcs?|Pieces?|Sets?)\b/i)).find(Boolean);
+  if(!qty)throw Error(`S/No ${lineNo}: không xác định được quantity theo block.`);
+  const name=(block[1]?.text||'').replace(/\s+\d+(?:,\d{3})*(?:\.\d+)?\s+(Each|EA|Pcs?|Pieces?|Sets?)\b.*$/i,'').trim();
+  if(!name)throw Error(`S/No ${lineNo}: thiếu tên product.`);
+  const materials=block.slice(2).filter(x=>/\b(?:SOLID|S0LID|VENEER|MDF|PLYWOOD|PLY-WOOD|LVL|WOOD|TIMBER|METAL|FABRIC|LEATHER|FELT|FOAM|STEEL)\b/i.test(x.text)&&!/^REMARK|^CUSTOMER|^SHIP|^TOTAL|^CONCEPT|^EAN|^PO\s*#/i.test(x.text)).flatMap(x=>{
+   const parts=x.text.split(/,\s*/).map(s=>s.trim()).filter(Boolean),names=parts.length>1&&parts.every(s=>category(s)!=='UNKNOWN')?parts:[x.text];
+   return names.map(name=>({name:name.slice(0,150),category:category(name),scientific_name:'',source_reference:`PDF page ${x.page}, S/No ${lineNo}`}));
+  });
+  products.push({line_no:lineNo,sku,product_name:name,quantity:Number(qty[1].replaceAll(',','')),quantity_uom:qty[2],customer_po_allocations:allocations,source_reference:`PDF page ${block[0].page}, S/No ${lineNo}`,materials:[...new Map(materials.map(m=>[m.name,m])).values()]});
+ }
+ if(!products.length)throw Error('Chưa nhận dạng được layout S/No của KODA. Chọn trích xuất AI hoặc dùng Excel template.');
+ return {order_no:orderNo,products};
+}
 export function validateXlsxZip(buffer){const v=new DataView(buffer);let end=-1;for(let i=v.byteLength-22;i>=Math.max(0,v.byteLength-65557);i--)if(v.getUint32(i,true)===0x06054b50){end=i;break;}if(end<0)throw Error('Không phải XLSX hợp lệ.');const count=v.getUint16(end+10,true),start=v.getUint32(end+16,true);if(count>2000)throw Error('Workbook quá lớn.');let offset=start,total=0;for(let i=0;i<count;i++){if(offset+46>v.byteLength||v.getUint32(offset,true)!==0x02014b50)throw Error('ZIP workbook không hợp lệ.');if(v.getUint16(offset+8,true)&1)throw Error('Workbook mã hóa không được hỗ trợ.');total+=v.getUint32(offset+24,true);if(total>100000000)throw Error('Workbook vượt giới hạn giải nén.');offset+=46+v.getUint16(offset+28,true)+v.getUint16(offset+30,true)+v.getUint16(offset+32,true);}return true;}
 function cellString(cell){if(cell.type===6||cell.value&&typeof cell.value==='object'&&('formula' in cell.value||'sharedFormula' in cell.value))throw Error('Template import chỉ nhận giá trị, không nhận công thức.');if(cell.value===null||cell.value===undefined)return '';if(typeof cell.value==='string')return cell.value.trim();if(typeof cell.value==='number'){const format=String(cell.numFmt||'');return /^0+$/.test(format)?String(cell.value).padStart(format.length,'0'):String(cell.value);}if(cell.value.richText)return cell.value.richText.map(x=>x.text).join('').trim();throw Error('Ô Excel chứa kiểu dữ liệu không được hỗ trợ.');}
 export async function readExcel(file,orderNo,{ExcelJS}={}){if(!file||!/\.xlsx$/i.test(file.name)||file.size>10000000)throw Error('Chọn template .xlsx tối đa 10 MB.');const bytes=await file.arrayBuffer();validateXlsxZip(bytes);const lib=ExcelJS||await script('/vendor/exceljs.min.js','ExcelJS'),book=new lib.Workbook();await book.xlsx.load(bytes);const sheet=book.getWorksheet('Order_Import');if(!sheet||sheet.rowCount>1001||sheet.columnCount>HEADERS.length)throw Error('Cần sheet Order_Import, tối đa 1.000 dòng và đúng các cột template.');const headers=HEADERS.map((_,i)=>cellString(sheet.getCell(1,i+1)));if(headers.some((h,i)=>h!==HEADERS[i]))throw Error('Tên/thứ tự cột khác template.');const products=new Map();for(let row=2;row<=sheet.rowCount;row++){const cells=HEADERS.map((_,i)=>cellString(sheet.getCell(row,i+1)));if(cells.every(x=>!x))continue;if(sheet.getRow(row).hidden)throw Error(`Dòng ${row} bị ẩn. Bỏ ẩn trước khi import.`);const [so,line,sku,name,quantity,uom,material,cat,scientific,ref]=cells;if(so!==orderNo)throw Error(`Dòng ${row}: Order No. không khớp.`);if(!line||!sku||!name||!quantity||!uom||!material||!ref)throw Error(`Dòng ${row}: thiếu trường bắt buộc.`);const qty=Number(quantity);if(!Number.isFinite(qty)||qty<=0)throw Error(`Dòng ${row}: quantity phải là số dương.`);const key=line+'|'+sku,existing=products.get(key);if(existing&&(existing.product_name!==name||existing.quantity!==qty||existing.quantity_uom!==uom))throw Error(`Dòng ${row}: thông tin product bị mâu thuẫn.`);const p=existing||{line_no:line,sku,product_name:name,quantity:qty,quantity_uom:uom,source_reference:`${file.name} · Order_Import row ${row}`,materials:[]};if(p.materials.some(m=>m.name.toLowerCase()===material.toLowerCase()))throw Error(`Dòng ${row}: vật liệu bị lặp.`);p.materials.push({name:material,category:cat||'UNKNOWN',scientific_name:scientific,source_reference:ref});products.set(key,p);}if(!products.size||products.size>100)throw Error('Template phải có 1–100 product blocks.');return {order_no:orderNo,products:[...products.values()]};}

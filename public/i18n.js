@@ -14,6 +14,7 @@ const translations={
   FIREBASE_UNAVAILABLE:'Firebase verification is temporarily unavailable. Try again.'
  },
  vi:{
+  'Customer PO allocations':'Phân bổ PO khách hàng','Customer PO#':'PO khách hàng','Destination':'Điểm nhận hàng','SKU / Product code':'SKU / mã sản phẩm','Add Customer PO':'Thêm PO khách hàng','Extract one product per S/No. with separate customer PO quantities and materials. Review the preview before saving. NON_WOOD is excluded; confirm UNKNOWN.':'Trích một sản phẩm cho mỗi S/No. cùng số lượng phân bổ riêng theo PO khách hàng và vật liệu. Kiểm tra preview trước khi lưu. NON_WOOD được loại trừ; cần xác nhận UNKNOWN.','I have checked each product, customer PO, quantity and material against the original PDF.':'Tôi đã đối chiếu từng sản phẩm, PO khách hàng, số lượng và vật liệu với PDF gốc.',
   'Sync task invitations':'Đồng bộ lời mời Google Calendar','Evidence deadlines for your role. Assigned owners and reviewers receive Google Calendar invitations; they may need to accept an invitation email. Click a date to see its tasks.':'Hạn chứng từ theo vai trò của bạn. Người phụ trách và người rà soát được giao sẽ nhận lời mời Google Calendar; có thể cần chấp nhận email mời. Nhấn vào ngày để xem task.','Task invitations checked. Recipients may need to accept their Google Calendar email invitations.':'Đã kiểm tra lời mời task. Người nhận có thể cần chấp nhận email mời từ Google Calendar.',
   'Removed.':'Đã xóa khỏi danh sách.','Confirm Remove':'Xác nhận xóa','Reason for removal':'Lý do xóa','I have checked the selected record.':'Tôi đã kiểm tra đúng mục cần xóa.',
   'REMOVE_CHILDREN_FIRST':'Hãy xóa các quan hệ con của mục này trước.','REMOVE_HAS_HISTORY':'Quan hệ đã có chứng từ hoặc GEO; không thể xóa lịch sử này.','REMOVE_ASSIGNED_TASKS':'Các task của quan hệ đã được phân công hoặc xử lý; hãy rà soát trước khi xóa.','REMOVE_MATERIAL_LINKED':'Material còn quan hệ, task, chứng từ hoặc GEO; hãy xử lý các liên kết trước.','REMOVE_SUPPLIER_LINKED':'Supplier còn liên kết với quan hệ, chứng từ hoặc User; hãy xử lý các liên kết trước.','REMOVE_USER_ASSIGNED':'Hãy chuyển giao Order, task hoặc upload đang xử lý trước khi xóa User.','REMOVE_USER_LOGIN':'Chưa vô hiệu hóa được tài khoản đăng nhập; User vẫn ở trạng thái tắt, hãy thử lại.','SCHEMA_MISMATCH':'Cấu trúc Sheet chưa được cập nhật; Admin cần chạy migration theo hướng dẫn gói cập nhật.','EXPORT_ORPHANED_EVIDENCE':'Chứng từ thiếu liên kết Material, Relationship hoặc Evidence Type; hãy rà soát trước khi xuất.', 'Excluded evidence with missing links:':'Đã loại chứng từ thiếu liên kết:',
@@ -73,22 +74,21 @@ const translations={
 let language=localStorage.getItem('eudr_language')||(/^vi\b/i.test(navigator.language)?'vi':'en');
 if(!['en','vi'].includes(language))language='en';
 const originalText=new WeakMap();
-function t(key,variables={}){let value=translations[language][key]||translations.en[key]||key;return value.replace(/\{(\w+)\}/g,(_,k)=>String(variables[k]??''));}
+function t(key,variables={}){let value=language==='vi'&&v27Vietnamese.has(key)?key:translations[language][key]||translations.en[key]||key;return value.replace(/\{(\w+)\}/g,(_,k)=>String(variables[k]??''));}
 function translateUI(root=document){
  document.documentElement.lang=language;
  root.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});
- // Only fixed presentation elements. Never translate table cells, file names, values or source evidence.
- root.querySelectorAll('button, h1, h2, h3, th, legend, option, summary, .sidebar-section, .badge, .status-pill').forEach(el=>{
-  if(el.children.length||el.dataset.i18n)return;
-  const original=el.dataset.i18nOriginal||el.textContent.trim();
-  if(translations.vi[original]){el.dataset.i18nOriginal=original;el.textContent=t(original);}
- });
- root.querySelectorAll('label, p, small').forEach(el=>{
-  for(const node of el.childNodes){if(node.nodeType!==Node.TEXT_NODE)continue;
+ // Translate fixed labels even when a label contains an input, link or value.
+ // Exact dictionary matches leave document names, evidence, and user text intact.
+ root.querySelectorAll('button,h1,h2,h3,h4,h5,th,legend,option,summary,a,label,p,small,strong,span[data-i18n-fragments],li[data-i18n-fragments],.sidebar-section,.badge,.status-pill').forEach(el=>{
+  if(el.dataset.i18n||el.closest('[data-i18n-source]'))return;
+  for(const node of el.childNodes){
+   if(node.nodeType!==Node.TEXT_NODE)continue;
    const original=originalText.get(node)||node.textContent.trim();
-   if(!translations.vi[original])continue;
+   if(!Object.hasOwn(translations.vi,original)&&!Object.hasOwn(translations.en,original)&&!el.hasAttribute('data-i18n-fragments'))continue;
    originalText.set(node,original);
-   node.textContent=node.textContent.replace(node.textContent.trim(),t(original));
+   const exact=Object.hasOwn(translations.vi,original)||Object.hasOwn(translations.en,original);
+   node.textContent=node.textContent.replace(node.textContent.trim(),exact?t(original):translateFragments(original));
   }
  });
  root.querySelectorAll('input[placeholder]').forEach(el=>{const original=el.dataset.i18nPlaceholder||el.placeholder;el.dataset.i18nPlaceholder=original;el.placeholder=t(original)});
@@ -118,3 +118,219 @@ Object.assign(translations.vi,{
  'Choose one or more orders. Each order gets its own ZIP in its Drive export folder, with a separate download button. Approved originals and human-verified AI copies are shown separately.':'Chọn một hoặc nhiều đơn hàng. Mỗi đơn hàng có một tệp ZIP trong thư mục xuất của đơn hàng và một nút tải riêng. Chứng từ gốc đã duyệt và bản AI được người phụ trách xác minh hiển thị riêng.',
  'Packages above 3 MB download in checked chunks without leaving this page.':'Có thể tải các gói trên 3 MB theo từng phần ngay tại trang này.'
 });
+
+// V2.7 workspace and drawer labels. The English text is canonical for both
+// languages; legacy Vietnamese literals are mapped back for older templates.
+const v27Labels={
+ 'Product · Material · PO / lot':'Sản phẩm · Vật liệu · PO / lô',
+ 'PO / lot source':'Nguồn PO / lô','Legacy Order checks':'Kiểm tra Order phiên bản trước',
+ 'This imported product contains only NON_WOOD materials.':'Product chỉ có NON_WOOD theo bản import đã xác nhận.',
+ 'No material is linked to this product. Confirm its source in Product · Material · PO / lot.':'Chưa có material gắn với product này. Xác nhận liên kết trong Product · Material · PO / lot.',
+ 'No source has been allocated to this product.':'Nguồn chưa được phân bổ cho product này.',
+ 'Review multiple PDFs by material and PO/lot source. Refresh results from Drive for findings, references and next actions.':'Kiểm tra nhiều PDF theo material và nguồn PO/lô. Refresh results from Drive để lấy nhận xét, dẫn chứng và next actions.',
+ 'Keep documents, GEO and history; stop tracking this material.':'Giữ nguyên chứng từ, GEO và lịch sử; ngừng theo dõi material này.',
+ 'Remove this mistaken material and its unused automatic tasks. Keep the folder.':'Xóa material nhập nhầm cùng các task tự tạo chưa có hoạt động. Folder được giữ lại.',
+ 'No business links.':'Không có liên kết nghiệp vụ.','Reason':'Lý do','I confirm this action.':'Tôi xác nhận phương án trên',
+ 'Customer PO/SKU is separate from a material purchase PO. Create a separate source for each distinct PO/lot and link only verified records.':'Customer PO/SKU không phải PO mua nguyên liệu. Hai PO/lô khác nhau phải tạo hai nguồn riêng. Chỉ liên kết dữ liệu có căn cứ.',
+ 'PO/lot source':'Nguồn PO/lô','No source yet':'Chưa có nguồn','Unknown PO':'PO chưa rõ',
+ '+ Add material source':'+ Tạo nguồn material','Unknown supplier':'Chưa xác định',
+ 'Harvest country (ISO 2: VN, US…)':'Quốc gia khai thác (ISO 2: VN, US…)',
+ 'Harvest start':'Bắt đầu khai thác','Harvest end':'Kết thúc khai thác','Create separate source':'Tạo nguồn riêng',
+ 'Allocate source to product':'Phân bổ nguồn cho product','Quantity unknown':'Quantity chưa rõ',
+ 'No product is allocated to this source.':'Chưa xác định product sử dụng nguồn này.',
+ 'Quantity used':'Quantity sử dụng','Save allocation':'Lưu phân bổ',
+ 'Transactions for this source':'Chuỗi giao dịch theo nguồn',
+ 'Flow: upstream → downstream → KODA. A supplier may appear in multiple branches and lots.':'Chiều giao dịch: upstream → downstream → KODA. Một supplier có thể xuất hiện ở nhiều nhánh/lô.',
+ 'Missing INV/transaction':'thiếu INV/transaction','No source transactions yet.':'Chưa có giao dịch nguồn.',
+ 'Unverified points':'Các điểm chưa xác minh','Node name':'Tên node','Type':'Loại',
+ 'This is a forest source / terminal origin':'Đây là nguồn rừng / terminal origin',
+ 'Add node':'Thêm node','+ Upstream → downstream transaction':'+ Giao dịch upstream → downstream',
+ 'Upstream lot':'Lot tại upstream','Downstream lot':'Lot tại downstream',
+ 'Supporting transaction documents':'Chứng từ giao dịch có căn cứ','Add transaction':'Thêm giao dịch',
+ 'Link documents, GEO and tasks to the correct PO/lot':'Gắn chứng từ, GEO, task vào đúng PO/lô',
+ 'Unlinked records cannot establish completeness for this source.':'Các record chưa gắn nguồn không được dùng để kết luận bộ hồ sơ của nguồn này đã đủ.',
+ 'I verified this record belongs to this PO/lot':'Tôi đã kiểm tra record thuộc PO/lô này','Link source':'Gắn nguồn',
+ 'Reason for removing the product/source allocation':'Lý do bỏ phân bổ product/nguồn',
+ 'Reason for deactivating this transaction; history is retained':'Lý do ngừng dùng giao dịch này; lịch sử được giữ',
+ 'Select multiple PDFs for one material source. Results are stored in Drive; use Refresh results from Drive to view them.':'Chọn nhiều PDF cho một nguồn material. Kết quả được lưu ở Drive; dùng Refresh results from Drive để xem lại.',
+ 'Source not identified':'Chưa xác định nguồn',
+ 'Create a source and allocate a product in Product · Material · PO / lot before reviewing.':'Tạo nguồn và phân bổ product trong Product · Material · PO / lot trước khi đánh giá.',
+ 'Harvest country unknown':'Quốc gia khai thác chưa rõ','Source documents':'Chứng từ của nguồn',
+ 'Upload multiple PDFs · up to 100 MB each':'Upload nhiều PDF · tối đa 100 MB/file',
+ 'Upload to this source':'Upload vào nguồn này',
+ 'Select all PDFs to review together (maximum 20)':'Chọn toàn bộ file cần đối chiếu chung (tối đa 20)',
+ 'Linked to task':'đã gắn task','Not linked to task':'chưa gắn task',
+ 'Link PDF to evidence task':'Gắn PDF vào evidence task','No PDFs linked to this source.':'Chưa có PDF gắn đúng nguồn.',
+ 'PDFs are not linked to a PO/lot. Link the source in Product · Material · PO / lot before reviewing.':'PDF chưa gắn PO/lô. Gắn nguồn trong Product · Material · PO / lot để đưa vào đánh giá.',
+ 'Run OCR on all pages if the text layer is unreliable':'OCR lại toàn bộ trang khi text layer không đáng tin',
+ 'Run OCR + AI across selected PDFs':'Chạy OCR + AI đối chiếu nhiều file',
+ 'Prompt for ChatGPT review':'Prompt để kiểm tra bằng ChatGPT',
+ 'Create a prompt for the source and selected PDFs':'Tạo prompt theo nguồn và các PDF đã chọn',
+ 'Stop OCR / pause upload':'Dừng OCR / pause upload',
+ 'AI runs in the background; you can close this window once queued. Reviewing multiple PDFs uses one AI request.':'AI chạy nền, có thể đóng cửa sổ sau khi đã xếp lượt. Một lần đối chiếu nhiều PDF tính một lượt AI.',
+ 'Admin must configure AI and installAIWorker for automatic LLM calls. Manual prompts can save results to Drive.':'Admin cần cấu hình AI và installAIWorker để tự gọi LLM. Có thể dùng prompt thủ công với kết quả lưu vào Drive.',
+ 'Results from Drive':'Kết quả từ Drive','Queued job not started':'Hủy lượt chưa chạy',
+ 'Additional documents needed':'Cần bổ sung','Conflicting information':'Có mâu thuẫn',
+ 'Verification needed':'Cần xác minh','Ready for reviewer':'Sẵn sàng reviewer xem xét',
+ 'PDFs reviewed':'PDF đã kiểm tra','pages':'trang','page':'trang',
+ 'Check page':'cần xem lại trang','System checks':'Kiểm tra hệ thống',
+ 'No graph issues detected.':'Không có lỗi graph được phát hiện.',
+ 'Confirm follow-up tasks':'Xác nhận tạo follow-up tasks',
+ 'No results for this source yet.':'Chưa có kết quả cho nguồn này.',
+ 'Open prompt':'Mở prompt','Results folder':'Folder nhận kết quả',
+ 'The source changed':'nguồn đã thay đổi',
+ 'The entire PDF matches the selected task':'Toàn bộ PDF này phù hợp với task đã chọn',
+ 'I confirm assigned users may read this entire PDF':'Tôi xác nhận được phép cho người được giao task đọc toàn bộ PDF này',
+ 'Link working copy · UPLOADED':'Gắn bản làm việc · UPLOADED',
+ 'Confirm task creation and follow-up in the existing KODA Calendar':'Tôi xác nhận tạo task và follow-up vào Calendar KODA hiện có',
+ 'Create selected tasks':'Tạo tasks đã chọn',
+ 'OCR + AI · EUDR review':'OCR + AI · Kiểm tra EUDR',
+ 'Read the document package and see missing or conflicting items in the browser.':'Đọc bộ chứng từ và nhận danh sách thiếu/mâu thuẫn ngay trên web.',
+ 'Extract products, SKUs (PO# per block), quantities and materials. Review the preview before saving. NON_WOOD does not create a material; UNKNOWN requires confirmation.':'Trích xuất sản phẩm, SKU (PO# theo block), quantity và material. Kiểm tra bản preview trước khi lưu. NON_WOOD sẽ không tạo material; UNKNOWN cần xác nhận.',
+ 'Existing folder':'Folder hiện có','Original PDF · up to 100 MB':'PDF gốc · tối đa 100 MB',
+ 'Or select a registered PDF':'Hoặc chọn PDF đã đăng ký','Select source':'Chọn source',
+ 'Choose the original file again for local OCR. Its SHA-256 must match the registered source.':'Chọn lại file gốc để OCR trên máy. File phải trùng SHA-256 với source đã đăng ký.',
+ 'Run OCR on all pages (if the text layer is missing or wrong)':'OCR lại toàn bộ trang (khi text layer sai hoặc thiếu)',
+ 'Extract with KODA layout':'Trích theo layout KODA',
+ 'Run OCR + AI review':'Chạy OCR + AI kiểm tra','Extract SO/PO with AI':'Trích SO/PO bằng AI',
+ 'Stop OCR':'Dừng OCR','AI connection is ready. Usage is tracked by Order.':'Kết nối AI đã sẵn sàng. Lượt gọi được ghi nhận theo Order.',
+ 'AI is unavailable; Admin must configure the connection and worker. KODA OCR/layout and Excel remain available.':'AI chưa sẵn sàng; Admin cần cấu hình kết nối và worker. OCR/layout KODA và Excel vẫn dùng được.',
+ 'Download Excel template':'Tải template Excel','Template .xlsx · up to 10 MB':'File template .xlsx · tối đa 10 MB',
+ 'Read Excel':'Đọc Excel','Each row is one product material. Repeated quantities across materials count once per product.':'Mỗi dòng là một material của product. Quantity lặp lại giữa các material sẽ chỉ tính một lần cho product.',
+ 'Recent runs':'Lần chạy gần đây','View result':'Xem kết quả','Cancel':'Hủy','No previous runs.':'Chưa có lần chạy.',
+ 'Saved previews':'Bản preview đã lưu','Open preview':'Mở preview',
+ 'Choose the existing Order folder':'Chọn folder đúng Order',
+ 'Review and correct the extracted data':'Kiểm tra và sửa dữ liệu trích xuất',
+ 'Leave Scientific Name blank if the source does not provide it. No data has been APPROVED.':'Scientific Name để trống nếu chưa có trên chứng từ. Chưa có dữ liệu nào được APPROVED.',
+ 'I checked products, SKUs, quantities and materials against the original file.':'Tôi đã đối chiếu sản phẩm, SKU, quantity và material với file gốc.',
+ 'Confirm and save to Order':'Xác nhận và lưu vào Order',
+ 'The preview is valid for human confirmation.':'Dữ liệu hợp lệ để user xác nhận.',
+ 'Upload a PDF package from Sourcing/Purchasing to review its content, missing documents and next actions.':'Tải một bộ PDF từ Sourcing/Purchasing để kiểm tra nội dung, chứng từ còn thiếu và việc cần làm tiếp.',
+ '1. Upload documents':'1. Upload bộ chứng từ','PDF · up to 100 MB':'PDF · tối đa 100 MB',
+ 'The original is saved under this Order. After an interruption, select the same file and click Resume.':'File gốc được lưu theo Order. Sau khi gián đoạn, chọn lại đúng file và nhấn Resume.',
+ '2. AI review':'2. Kiểm tra bằng AI','Create review prompt':'Tạo prompt kiểm tra',
+ 'Upload a PDF to begin.':'Upload PDF để bắt đầu.',
+ 'Copy the prompt into ChatGPT Business, grant file access or attach the PDF. AI stores results in Drive when connected; then click Refresh results.':'Copy prompt sang ChatGPT Business, cấp quyền đọc file hoặc đính kèm PDF. AI lưu kết quả vào Drive khi kết nối cho phép; sau đó nhấn Refresh results.',
+ 'Refresh results from Drive':'Refresh results từ Drive','3. Results and actions':'3. Kết quả và hành động',
+ 'An authorized person must check the current EUDR rules before concluding.':'Cần người phụ trách kiểm tra lại phiên bản quy định EUDR trước khi kết luận.',
+ 'The Order or documents changed. Create a new prompt before using this result.':'Order hoặc chứng từ đã thay đổi. Tạo prompt mới trước khi dùng kết quả này.',
+ 'Check':'Kiểm tra','Status / Page':'Trạng thái / Trang','Issue':'Vấn đề','Next action':'Cần làm gì',
+ 'AI found no issues; continue reviewing requirements and approving evidence.':'AI chưa ghi nhận vấn đề; tiếp tục kiểm tra các yêu cầu và duyệt chứng từ.',
+ 'Suggested document boundaries':'Ranh giới chứng từ đề xuất',
+ 'Original pages':'Trang gốc','Confidence':'Độ tin cậy',
+ 'Confirm boundaries and split PDF':'Xác nhận ranh giới và tách PDF',
+ 'Import result JSON':'Import file JSON kết quả',
+ 'No previous review. Create a prompt in step 2.':'Chưa có lần kiểm tra. Tạo prompt ở bước 2.',
+ 'Workspace requirements awaiting approval':'Yêu cầu trong Workspace chưa được duyệt',
+ 'Unassigned':'Chưa phân công','No required tasks await approval.':'Không có task bắt buộc đang chờ duyệt.',
+ 'This check supports Marketing in reviewing evidence. EUDR and DDS decisions require an authorized operator.':'Kiểm tra này hỗ trợ Marketing đối chiếu hồ sơ. Kết luận EUDR và DDS cần người có thẩm quyền.',
+ 'Split PDFs':'Các PDF đã tách','Link to evidence task':'Gắn vào task chứng từ',
+ 'This working copy comes from the original package. Link it to the right evidence task and approve it before Export.':'Đây là bản làm việc từ bộ gốc. Gắn vào đúng task chứng từ và duyệt trước khi dùng cho Export.',
+ 'No paid API is needed for this prompt workflow. The review runs when you send the prompt in ChatGPT.':'Không cần mua API để dùng luồng prompt này. Kiểm tra chỉ chạy khi bạn gửi prompt trong ChatGPT.',
+ 'Link PDF to evidence task':'Gắn PDF vào task chứng từ',
+ 'I confirm this PDF matches the selected task, material and supplier.':'Tôi xác nhận nội dung PDF đúng task, vật liệu và supplier được chọn.',
+ 'Link and submit for review':'Gắn và gửi quy trình duyệt',
+ 'Confirm working copy split':'Xác nhận tách bản làm việc',
+ 'Check the suggested pages and boundaries above before confirming. The original remains intact.':'Kiểm tra các trang và ranh giới đề xuất ở trên trước khi xác nhận. Bản gốc được giữ nguyên.',
+ 'Select the original PDF again':'Chọn lại đúng PDF gốc',
+ 'I checked and confirmed each document boundary.':'Tôi đã kiểm tra và xác nhận ranh giới từng chứng từ.',
+ 'Split and save to Order':'Tách và lưu vào Order'
+};
+Object.assign(v27Labels,{
+ 'PO pending':'PO chưa rõ','Lot pending':'lot pending','Source pending':'Chưa có nguồn',
+ 'OCR stopped.':'Đã dừng OCR.',
+ 'The Order changed. Check it again and validate before saving.':'Order đã thay đổi. Đối chiếu lại và Validate trước khi lưu.',
+ 'The queued job was cancelled.':'Đã hủy lượt chưa chạy.',
+ 'Enter an Order number first.':'Nhập Order No. trước.',
+ 'Choose the existing folder to continue.':'Chọn folder hiện có để tiếp tục.',
+ 'A draft Order was created; products are saved only after preview confirmation.':'Đã tạo bản nháp Order; sản phẩm chỉ được lưu sau khi xác nhận preview.',
+ 'The file does not match the selected source.':'File không trùng source đã chọn.',
+ 'Saving original PDF':'Lưu PDF gốc',
+ 'Admin must configure GEMINI API and install the worker before AI review.':'Admin cần cấu hình GEMINI API và cài worker trước khi chạy AI.',
+ 'Select the original PDF of the uploaded dossier.':'Chọn đúng PDF gốc của bộ chứng từ đã upload.',
+ 'AI job queued. You can close this window and return to the Order.':'Đã xếp lượt AI. Có thể đóng cửa sổ và xem lại tại Order.',
+ 'AI has returned a result. Open Dossier Check to review gaps and actions.':'AI đã trả kết quả. Mở Dossier Check để xem phần thiếu và hành động.',
+ 'Open Dossier Check results':'Mở kết quả Dossier Check',
+ 'Awaiting result; you can close this window and return later.':'chờ kết quả; có thể đóng và xem lại sau.',
+ 'Still processing. Reopen Smart Import to see the result.':'Lượt vẫn đang xử lý. Mở lại Smart Import để xem kết quả sau.',
+ 'Validate and confirm the source before saving.':'Validate và xác nhận đối chiếu trước khi lưu.',
+ 'Select 1–20 PDFs.':'Chọn 1–20 PDF.','Select 1–20 PDFs linked to this source.':'Chọn 1–20 PDF đã gắn nguồn.',
+ 'AI is not configured.':'AI chưa cấu hình.',
+ 'Stopped. Uploaded files and queued jobs are preserved.':'Đã dừng. File đã upload và lượt đã xếp hàng vẫn được giữ.',
+ 'PDFs saved to Drive; select files and run the review.':'PDF đã lưu vào Drive; chọn file và chạy đánh giá.',
+ 'The combined text exceeds the AI limit. Raise the Admin limit or review a smaller group; no files were silently skipped.':'Tổng text vượt giới hạn AI. Tăng giới hạn Admin hoặc chọn nhóm file nhỏ hơn; không file nào được âm thầm bỏ qua.',
+ 'Refresh results from Drive after the worker finishes.':'Dùng Refresh results from Drive sau khi worker xử lý.',
+ 'Drive results loaded. QUEUED/RUNNING jobs await the worker.':'Đã đọc kết quả từ Drive. Lượt QUEUED/RUNNING cần chờ worker.',
+ 'If this PDF includes multiple documents or Orders, split the right section before sharing it with a task.':'Nếu file chứa nhiều chứng từ/đơn hàng, cần tách đúng phần trước khi chia sẻ cho task.',
+ 'Link a task to the source in Product · Material · PO / lot first.':'Chưa có task gắn nguồn. Gắn task trong Product · Material · PO / lot trước.',
+ 'PDF linked. Submit it for review in the existing workflow.':'Đã gắn PDF. Submit và reviewer duyệt chứng từ theo workflow hiện có.',
+ 'Follow-up tasks created. This did not approve any evidence.':'Đã tạo follow-up. Các task không tự phê duyệt chứng từ.',
+ 'Check this source before using the result.':'CẦN KIỂM TRA LẠI',
+ 'MORE DOCUMENTS / VERIFICATION NEEDED':'CẦN BỔ SUNG / XÁC MINH',
+ 'AWAITING HUMAN REVIEW':'CHỜ NGƯỜI PHỤ TRÁCH DUYỆT',
+ 'AWAITING RESULT':'ĐANG CHỜ KẾT QUẢ',
+ 'Prompt copied.':'Đã copy prompt.',
+ 'The result JSON may be up to 48 KB.':'JSON kết quả tối đa 48 KB.',
+ 'Confirm the content and task.':'Cần xác nhận nội dung và task.',
+ 'No matching task. Create one in the Order first.':'Không có task phù hợp. Tạo task trong Order trước.',
+ 'Linked to a task as UPLOADED. Submit and review it in Order Workspace.':'Đã gắn task ở trạng thái UPLOADED. Submit và duyệt trong Order Workspace.',
+ 'Confirm document boundaries before splitting.':'Cần xác nhận ranh giới trước khi tách.',
+ 'This file does not match the reviewed original PDF.':'File không trùng PDF gốc đã kiểm tra.',
+ 'Working copies saved. Link each to the right task and review before Export.':'Đã tách bản làm việc. Gắn đúng task và duyệt chứng từ trước khi Export.'
+});
+Object.assign(v27Labels,{
+ 'Saved {products} products and {materials} materials. Continue collecting and reviewing evidence.':'Đã lưu {products} product và {materials} material. Tiếp tục thu thập và duyệt chứng từ.',
+ 'Reading from Drive:':'Đọc từ Drive:','Job queued:':'Đã xếp lượt',
+ 'Uploading':'Đang tải lên','Linked':'đã gắn','Prompt for ChatGPT Business':'Prompt cho ChatGPT Business',
+ 'Save JSON named':'Lưu JSON đúng tên',
+ 'in this folder, then Refresh results from Drive.':'trong folder này, rồi Refresh results from Drive.',
+ 'Synchronized {count} results.':'Đã đồng bộ {count} kết quả.',
+ 'pages reviewed':'trang đã đọc',
+ 'Review the original document and source.':'Kiểm tra chứng từ gốc và nguồn.'
+});
+Object.assign(v27Labels,{
+ 'upload incomplete':'upload chưa hoàn tất','Read:':'Đã đọc:',
+ 'issues to resolve. AI results require human review.':'điểm cần xử lý. Kết quả AI cần người phụ trách duyệt.',
+ 'Evidence':'Chứng từ','Link source PDF to evidence task':'Gắn PDF vào evidence task'
+});
+Object.assign(v27Labels,{
+ 'Supplier material PO':'PO mua vật liệu của nhà cung cấp',
+ 'PO line':'Dòng PO','Lot / batch':'Lô / đợt','Forest origin':'Nguồn gốc rừng',
+ 'Plot ID (cho PLOT)':'Mã lô đất (cho PLOT)',
+ '+ Supplier/forest node':'+ Nút nhà cung cấp / rừng',
+ 'Upstream':'Thượng nguồn','Downstream':'Hạ nguồn','INV / shipment / transaction':'Hóa đơn / lô hàng / giao dịch',
+ 'Record':'Bản ghi','Unlink':'Bỏ liên kết','Deactivate':'Ngừng dùng',
+ 'EUDR Dossier · Material / PO / lot':'Hồ sơ EUDR · Vật liệu / PO / lô',
+ 'Supplier material PO / line / lot':'PO vật liệu của nhà cung cấp / dòng / lô',
+ 'Refresh results from Drive':'Làm mới kết quả từ Drive','Result folder':'Thư mục kết quả',
+ 'Source Reference':'Tham chiếu nguồn',
+ 'Validate preview':'Kiểm tra bản xem trước','Smart Import · SO/PO/Excel':'Nhập thông minh · SO/PO/Excel',
+ 'Quantity used':'Số lượng sử dụng',
+ 'Customer (optional)':'Khách hàng (không bắt buộc)',
+ 'Due date (optional)':'Hạn nộp (không bắt buộc)'
+});
+Object.assign(translations.vi,v27Labels);
+Object.entries(v27Labels).forEach(([en,vi])=>{translations.en[vi]=en;});
+const v27Vietnamese=new Set(Object.values(v27Labels));
+const v27Fragments=[
+ ['upload incomplete','upload chưa hoàn tất'],['Read:','Đã đọc:'],
+ ['issues to resolve. AI results require human review.','điểm cần xử lý. Kết quả AI cần người phụ trách duyệt.'],
+ ['Unverified points','Các điểm chưa xác minh'],['Additional documents needed','Cần bổ sung'],
+ ['PDFs are not linked to a PO/lot. Link the source in Product · Material · PO / lot before reviewing.','PDF chưa gắn PO/lô. Gắn nguồn trong Product · Material · PO / lot để đưa vào đánh giá.'],
+ ['Save JSON named','Lưu JSON đúng tên'],['in this folder, then Refresh results from Drive.','trong folder này, rồi Refresh results from Drive.'],
+ ['If this PDF includes multiple documents or Orders, split the right section before sharing it with a task.','Nếu file chứa nhiều chứng từ/đơn hàng, cần tách đúng phần trước khi chia sẻ cho task.'],
+ ['The source changed','nguồn đã thay đổi'],['Check page','cần xem lại trang'],
+ ['Linked to task','đã gắn task'],['Not linked to task','chưa gắn task'],
+ ['Saving original PDF','Lưu PDF gốc'],['Awaiting result; you can close this window and return later.','chờ kết quả; có thể đóng và xem lại sau.'],
+ ['Saved','Đã lưu'],['products and','product và'],['materials. Continue collecting and reviewing evidence.','material. Tiếp tục thu thập và duyệt chứng từ.'],
+ ['Job queued:','Đã xếp lượt'],['Refresh results from Drive after the worker finishes.','Dùng Refresh results from Drive sau khi worker xử lý.'],
+ ['Missing','Thiếu'],['Uploaded','Đã tải lên'],['Queued','Đang chờ'],['Running','Đang xử lý'],['Completed','Đã xong'],['Unassigned','Chưa phân công'],
+ ['Partial','Một phần'],['Complete','Đầy đủ'],['pages','trang'],['page','trang']
+].sort((a,b)=>b[0].length-a[0].length);
+function translateFragments(original){
+ let value=original;
+ for(const [en,vi] of v27Fragments)value=value.split(language==='en'?vi:en).join(language==='en'?en:vi);
+ return value;
+}
+Object.assign(translations.en,{QUEUED:'Queued',RUNNING:'Running',DONE:'Completed',CANCELLED:'Cancelled',FAILED:'Failed',PARTIAL:'Partial',FULL:'Complete',SUPPORTED:'Supported',NOT_VERIFIABLE:'Not verifiable',CHAIN:'Supply chain',DOCUMENTS:'Documents',GEO_COUNTRY:'GEO and country of origin',LEGALITY:'Legal harvesting',MATERIAL_SPECIES:'Material and species',LOT_QUANTITY:'Lot and quantity',HARVEST_PERIOD_AREA:'Harvest period and area',DEFORESTATION:'Deforestation'});
+Object.assign(translations.vi,{QUEUED:'Đang chờ',RUNNING:'Đang xử lý',DONE:'Đã xong',CANCELLED:'Đã hủy',FAILED:'Thất bại',PARTIAL:'Một phần',FULL:'Đầy đủ',SUPPORTED:'Có chứng cứ hỗ trợ',NOT_VERIFIABLE:'Không thể kiểm chứng',CHAIN:'Chuỗi cung ứng',DOCUMENTS:'Chứng từ',GEO_COUNTRY:'GEO và quốc gia xuất xứ',LEGALITY:'Khai thác hợp pháp',MATERIAL_SPECIES:'Vật liệu và loài gỗ',LOT_QUANTITY:'Lô và số lượng',HARVEST_PERIOD_AREA:'Thời gian và diện tích khai thác',DEFORESTATION:'Không phá rừng'});
