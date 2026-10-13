@@ -312,6 +312,10 @@ Object.assign(v27Labels,{
 Object.assign(v27Labels,{
  'Material / PO / lot dossier · up to 100 MB/PDF':'Hồ sơ theo vật liệu / PO / lô · tối đa 100 MB/PDF',
  'Legacy · whole SO':'Bản cũ · toàn bộ SO',
+ 'Open material dossier · upload, OCR/AI and results':'Mở hồ sơ vật liệu · upload, OCR/AI và kết quả',
+ 'Previous whole-SO reviews':'Lịch sử kiểm tra toàn SO',
+ 'Earlier whole-order results are kept here. This is a separate historical workflow.':'Kết quả kiểm tra toàn SO trước đây được giữ tại đây. Đây là luồng lịch sử riêng.',
+ 'Open previous SO review':'Mở kiểm tra SO trước đây',
  'Upload documents for this material':'Upload chứng từ cho vật liệu',
  'PDFs are linked to the selected PO/lot.':'PDF sẽ được gắn với PO/lô đã chọn.',
  'PO/lot unknown: PDFs are stored under this material. Verify and link the correct source before AI review.':'Chưa xác định PO/lô: PDF được lưu vào material này, chờ bạn kiểm tra và gắn đúng nguồn trước khi AI đánh giá.',
@@ -321,6 +325,19 @@ Object.assign(v27Labels,{
  'Confirm link to selected PO/lot':'Xác nhận gắn vào PO/lô đang chọn',
  'No PDFs awaiting source assignment.':'Không có PDF chờ gắn nguồn.',
  'Confirm the PO/lot source before AI review. You can upload PDFs up to 100 MB each now.':'Cần xác nhận nguồn PO/lô trước khi chạy AI đánh giá. Có thể upload PDF 100 MB/file ngay bây giờ.'
+});
+Object.assign(v27Labels,{
+ 'All materials':'Tất cả vật liệu','Unassigned materials':'Vật liệu chưa gắn product','No materials recorded.':'Chưa có vật liệu.',
+ 'Source PO/lot (optional · add later)':'PO/lô nguồn (tùy chọn · có thể bổ sung sau)',
+ 'You can upload and review PDFs for this material without a PO/lot. Add source details later.':'Chưa biết PO/lô vẫn có thể upload và đánh giá PDF theo material. Bổ sung thông tin nguồn sau.',
+ 'Review selected PDFs':'Đánh giá các PDF đã chọn',
+ 'Select uploaded PDFs for material review; PO/line/lot can be added later.':'Chọn PDF đã upload để đánh giá material; PO/line/lot có thể bổ sung sau.',
+ 'Preparing material review; PO/line/lot can be added later.':'Đang chuẩn bị đánh giá material; PO/line/lot có thể bổ sung sau.',
+ 'PDFs were saved to Drive under this material. Select PDFs to review; PO/line/lot can be added later.':'PDF đã lưu vào Drive theo material. Chọn PDF để đánh giá; PO/line/lot có thể bổ sung sau.',
+ 'Add PO / line / lot when available':'Bổ sung PO / line / lot khi có thông tin',
+ 'PO/line/lot saved after user confirmation.':'Đã lưu PO/line/lot theo xác nhận của người dùng.',
+ 'Select at least one PDF for this material.':'Chọn ít nhất một PDF của material này.',
+ 'PDFs are ready. PO/line/lot can be added later.':'PDF đã sẵn sàng. PO/line/lot còn thiếu có thể bổ sung sau.'
 });
 Object.assign(translations.vi,v27Labels);
 Object.entries(v27Labels).forEach(([en,vi])=>{translations.en[vi]=en;});
