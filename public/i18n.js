@@ -349,6 +349,21 @@ Object.assign(v27Labels,{
  'Upload documents for this material':'Upload chứng từ cho material',
  'The web and backend versions differ. Deploy the Netlify function and Apps Script bridge from this update, then reopen this dossier. Your uploaded PDFs remain in Drive.':'Phiên bản web và backend chưa đồng bộ. Cập nhật Netlify Function và Apps Script bridge trong gói này, sau đó mở lại dossier. PDF đã upload vẫn ở Drive.'
 });
+Object.assign(v27Labels,{
+ 'Select a material, add its PDFs, then review the findings here.':'Chọn vật liệu, thêm PDF và xem nhận xét ngay tại đây.',
+ '1. Material and source':'1. Vật liệu và nguồn',
+ '2. PDF documents':'2. Chứng từ PDF',
+ 'Upload PDFs':'Tải PDF lên',
+ 'Select the uploaded PDFs to create a review prompt. PO/line/lot can be added later.':'Chọn PDF đã tải lên để tạo prompt đánh giá. Có thể bổ sung PO/dòng/lô sau.',
+ '3. Review selected PDFs':'3. Đánh giá PDF đã chọn',
+ 'Prompt ready':'Prompt đã sẵn sàng',
+ 'Review prompt':'Prompt đánh giá',
+ 'Open ChatGPT copies the prompt. Paste it into the chat. Refresh here after ChatGPT saves the result to authorized Drive.':'Nút Mở ChatGPT sẽ sao chép prompt. Dán vào cuộc trò chuyện. Khi ChatGPT đã lưu kết quả vào Drive được cấp quyền, làm mới kết quả tại đây.',
+ '4. Results':'4. Kết quả',
+ 'Prompt is unavailable. Create a new review prompt.':'Chưa có nội dung prompt. Hãy tạo một prompt đánh giá mới.',
+ 'Select the prompt and copy it manually.':'Hãy chọn nội dung prompt và sao chép thủ công.',
+ 'Prompt ready. Copy it or open ChatGPT.':'Prompt đã sẵn sàng. Sao chép hoặc mở ChatGPT.'
+});
 Object.assign(translations.vi,v27Labels);
 Object.entries(v27Labels).forEach(([en,vi])=>{translations.en[vi]=en;});
 const v27Vietnamese=new Set(Object.values(v27Labels));
