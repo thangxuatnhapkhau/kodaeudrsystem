@@ -115,7 +115,7 @@ function migrateV23(dryRun){
  const email=Session.getEffectiveUser().getEmail().toLowerCase();
  if(!rows_('05_OWNER_MASTER').some(u=>u.email===email&&u.role==='ADMIN'&&u.active==='YES'))fail_('PERMISSION_DENIED','Existing deploying Admin required');
  return lock_(()=>{
-  const s=db_().getSheetByName('04_EVIDENCE_TRACKER'),expected=SCHEMA['04_EVIDENCE_TRACKER'],base=V23_BASE_['04_EVIDENCE_TRACKER'];
+  const s=db_().getSheetByName('04_EVIDENCE_TRACKER'),expected=V23_BASE_['04_EVIDENCE_TRACKER'].concat(V23_TASK_COLUMNS_),base=V23_BASE_['04_EVIDENCE_TRACKER'];
   if(!s)fail_('SCHEMA_MISMATCH','Evidence tracker missing');
   const actual=s.getRange(1,1,1,s.getLastColumn()).getValues()[0];
   if(actual.length<base.length||actual.length>expected.length||actual.some((h,i)=>h!==expected[i]))fail_('SCHEMA_MISMATCH','Evidence tracker headers changed');

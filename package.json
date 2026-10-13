@@ -1,11 +1,11 @@
 {
   "name": "koda-eudr-workspace",
   "private": true,
-  "version": "2.6.0-staging-candidate",
+  "version": "2.7.0",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check public/app.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs && node --check public/dossier.js && node --check public/smart-import.js && node --check public/ocr-import.mjs",
+    "check": "node --check public/app.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs && node --check public/dossier.js && node --check public/smart-import.js && node --check public/ocr-import.mjs && node --check public/trace.js && node --check public/material-review.js",
     "test:pdf": "python -m unittest discover -s tests -p 'test_*.py' -v",
     "test:browser": "node tests/browser-v22.mjs"
   },

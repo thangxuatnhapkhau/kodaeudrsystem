@@ -13,7 +13,7 @@ function validateGeometry_(geometry){
  const n=ring.length-1;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){if(j===i+1||i===0&&j===n-1)continue;if(intersects(ring[i],ring[i+1],ring[j],ring[j+1]))fail_('INVALID_GEO','Self-intersecting polygon');}
  return geometry;
 }
-function saveGeo(caseId,input){const u=requireCapability_('GEO_EDIT'),c=order_(caseId,u);const m=rows_('02_SO_ITEM_MATERIAL').find(m=>m.id===input.material_id&&m.case_id===caseId),node=rows_('15_SUPPLY_CHAIN').find(n=>n.id===input.chain_node_id&&n.case_id===caseId&&n.material_id===input.material_id&&['PLOT','PRODUCER','FOREST_OWNER'].includes(n.node_type));
+function saveGeo(caseId,input){const u=requireCapability_('GEO_EDIT'),c=order_(caseId,u);const m=rows_('02_SO_ITEM_MATERIAL').find(m=>m.id===input.material_id&&m.case_id===caseId&&m.active!=='NO'),node=rows_('15_SUPPLY_CHAIN').find(n=>n.id===input.chain_node_id&&n.case_id===caseId&&n.material_id===input.material_id&&['PLOT','PRODUCER','FOREST_OWNER'].includes(n.node_type));
  if(!m||!node)fail_('INVALID_GEO','A plot node in the material supply chain is required');if(u.role==='SUPPLIER_USER'&&node.supplier_id!==u.supplier_id)fail_('PERMISSION_DENIED','Plot outside supplier scope');
  const plot=text_(input.plot_id,150),country=text_(input.country_of_production,100),production=text_(input.production_range||'',200),area=Number(input.area_ha);if(!plot||node.node_type==='PLOT'&&node.plot_id!==plot||! /^[A-Z]{2}$/.test(country)||!production||!Number.isFinite(area)||area<=0)fail_('INVALID_GEO','Plot, production country, production range and area are required');
  const source=document_(input.source_document_id,u);if(source.case_id!==caseId||source.material_id!==m.id)fail_('INVALID_GEO','Source document outside material');

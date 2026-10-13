@@ -1,0 +1,174 @@
+{
+  "version": "2.7.0",
+  "base": "2.6.0",
+  "scope": "changed/new files only",
+  "validation": {
+    "node_tests_passed": 216,
+    "python_pdf_tests_passed": 7,
+    "javascript_syntax": "passed",
+    "production_deployed": false,
+    "paid_llm_tested": false
+  },
+  "files": [
+    {
+      "path": "README_UPGRADE_V27.md",
+      "size": 11348,
+      "sha256": "d68075ba4fb250b37c46b94ea95972d7981aa54c45c90946b50ba06527113607"
+    },
+    {
+      "path": "apps_script/AIService.gs",
+      "size": 18599,
+      "sha256": "80cb67eac0c06dec33c6089185fed8d98821cdb52c054e6e7570a70aecf0d966"
+    },
+    {
+      "path": "apps_script/AuthService.gs",
+      "size": 16749,
+      "sha256": "1f26446c094aef231da64e3a5e891c7f4f8c6f6822b5fede2140e09276af05f2"
+    },
+    {
+      "path": "apps_script/Bridge.gs",
+      "size": 4406,
+      "sha256": "ebc3ee65348c878cbbaf49315919c9c271cf4c25bdb6f67de69f311c96eda9bf"
+    },
+    {
+      "path": "apps_script/CalendarService.gs",
+      "size": 6410,
+      "sha256": "399ff8af9e2c0b9c6e8470f247ce141a1b9480e2f063b5595a2b2a5f68065400"
+    },
+    {
+      "path": "apps_script/DocumentService.gs",
+      "size": 19681,
+      "sha256": "2610ee70419c26097c6f2f4d194ab05300442101779cd76f967ed3edf48062a2"
+    },
+    {
+      "path": "apps_script/DossierService.gs",
+      "size": 33612,
+      "sha256": "b45fb90c3c8acedc9679f01072e51fc726895d846570a10da6297720db168c9e"
+    },
+    {
+      "path": "apps_script/ExportService.gs",
+      "size": 10208,
+      "sha256": "46543bddc3ccc51ac0d09d1be614908ac63814628127841e0f3afb6f46e8a34f"
+    },
+    {
+      "path": "apps_script/GeoService.gs",
+      "size": 7540,
+      "sha256": "dda9af718b7710c27f12bb2bd2c2ba0ff8963264ef2be0c8b15352bcf1b3edca"
+    },
+    {
+      "path": "apps_script/MaterialReviewService.gs",
+      "size": 23980,
+      "sha256": "06347b606b6b808f1d60983f255a2412a6da9e47c36424b37cf8ae911ee4f0cc"
+    },
+    {
+      "path": "apps_script/MetadataService.gs",
+      "size": 7278,
+      "sha256": "f75f923a5927660f4816c289c3761a5ccb2aa116f8607ba585d5c2bc6c151974"
+    },
+    {
+      "path": "apps_script/Migration.gs",
+      "size": 16053,
+      "sha256": "ef0b8dccdc046b46600b7a2e813d849485cc96c0f5ec51b5e2c6944ebdaff527"
+    },
+    {
+      "path": "apps_script/OrderService.gs",
+      "size": 36021,
+      "sha256": "59beb629fd3819ba2cbbb6f7fead1dd200bfa9231ef46a6185f07f9e7032e71b"
+    },
+    {
+      "path": "apps_script/SmartImportService.gs",
+      "size": 17547,
+      "sha256": "fa9ee37533bc11aea5b50e0cedc7e9763c3184fb4121daab496b0c44dd870403"
+    },
+    {
+      "path": "apps_script/TraceService.gs",
+      "size": 21679,
+      "sha256": "3dc34dcecbf625b88d4eda639b81f4eaad923b9c053e78d67a0606d4c790f96f"
+    },
+    {
+      "path": "apps_script/WorkspaceService.gs",
+      "size": 10566,
+      "sha256": "1dd6c27515567bf1c1494131f89418872d77a4c6fd91affdf10f4b0fae226ae6"
+    },
+    {
+      "path": "docs/V27_ACCEPTANCE.md",
+      "size": 3015,
+      "sha256": "b08ff10979c32551fc722ae8a2378ae7caec2800f59c312a2552a62a2177a1bd"
+    },
+    {
+      "path": "docs/V27_EUDR_BASELINE.md",
+      "size": 3115,
+      "sha256": "711fa9b3763af2f1efbebae3f1927ad89f55f6db44720907436745ebee5b8b1d"
+    },
+    {
+      "path": "netlify/functions/call.mjs",
+      "size": 7795,
+      "sha256": "c1062a57dceeef707a3eb87a8fd42a4b3656743eaffc368d52eb4073ab66b791"
+    },
+    {
+      "path": "package-lock.json",
+      "size": 187209,
+      "sha256": "fb4da4cb6598d76b1405c07c24c24039b441d609c7787598c84f4e76d874c60f"
+    },
+    {
+      "path": "package.json",
+      "size": 932,
+      "sha256": "2ab7e3c7f8b41c39edd275fb685a2962e8a7e7f63ab40b953ac50e08bd884dcb"
+    },
+    {
+      "path": "public/app.js",
+      "size": 104693,
+      "sha256": "731d0a9c75f24e278c768b39d0fcd86659c77bf7a2488a2c7d22f51885738415"
+    },
+    {
+      "path": "public/dossier.js",
+      "size": 16493,
+      "sha256": "77ba480317d9d2e7b458ffdfb51cdb1f5cbdaa0f593de13a2044740d8efb708d"
+    },
+    {
+      "path": "public/index.html",
+      "size": 2173,
+      "sha256": "8c0077b1a0b0203c9c09941a2d4f7ee9b75f95a3255ca9db02f21e756c8cac99"
+    },
+    {
+      "path": "public/material-review.js",
+      "size": 14834,
+      "sha256": "2dabc2ec8ba084c67195f45bc6948eed94f6adba2ba843b14e3c46fdac741abe"
+    },
+    {
+      "path": "public/ocr-import.mjs",
+      "size": 10503,
+      "sha256": "8c72a4ab43eef0477e0ce34942bef6abd93f721b9a1f89f28d810312f8f76e57"
+    },
+    {
+      "path": "public/smart-import.js",
+      "size": 12971,
+      "sha256": "3acd0aaaada5d8fc3ab5b5437f77adb1942a1425a41df049cac94583fc88dda5"
+    },
+    {
+      "path": "public/style.css",
+      "size": 31957,
+      "sha256": "828277f9648b5f1725d69db2be3303c4cc3c9dbb7c918287a5b0730b399c1b4f"
+    },
+    {
+      "path": "public/trace.js",
+      "size": 11060,
+      "sha256": "ad46920c2e561f0c2f25c9e2bfff6ed421314da86da26e7598339df35c97d9dd"
+    },
+    {
+      "path": "tests/runtime.mjs",
+      "size": 6252,
+      "sha256": "3edfb178981705cb62c2a424938f672fe6e0060145b8903a5229b7e626814372"
+    },
+    {
+      "path": "tests/ui-dom.test.mjs",
+      "size": 26610,
+      "sha256": "7a8c276ad916f8b1e38e5707454309d3a9f198919f6424d90ba966d6eb7c661f"
+    },
+    {
+      "path": "tests/v27.test.mjs",
+      "size": 26743,
+      "sha256": "aab522dbef3fc72dd5b9b85640cb67edd2782523f921dc2cbe9c2a2b51994b2a"
+    }
+  ]
+}

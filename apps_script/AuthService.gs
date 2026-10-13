@@ -5,7 +5,7 @@ function assigned_(u,id){try{return JSON.parse(u.assigned_orders||'[]').includes
 function canTask_(u,t){if(u.role==='ADMIN')return true;if(u.role==='SUPPLIER_USER')return !!u.supplier_id&&t.supplier_id===u.supplier_id;return t.owner===u.email||t.assigned_reviewer===u.email||assigned_(u,t.case_id)||rows_('01_SO_MASTER').some(c=>c.id===t.case_id&&c.owner===u.email);}
 function canOrder_(u,c){if(u.role==='ADMIN')return true;if(u.role==='SUPPLIER_USER')return rows_('04_EVIDENCE_TRACKER').some(t=>t.case_id===c.id&&canTask_(u,t));return c.owner===u.email||assigned_(u,c.id)||rows_('04_EVIDENCE_TRACKER').some(t=>t.case_id===c.id&&canTask_(u,t));}
 function order_(id,u){const c=rows_('01_SO_MASTER').find(x=>x.id===id);if(!c)fail_('ORDER_NOT_FOUND','Order not found');if(!canOrder_(u,c))fail_('PERMISSION_DENIED','Order outside assigned scope');return c;}
-function task_(id,u){const t=rows_('04_EVIDENCE_TRACKER').find(x=>x.id===id);if(!t||!canTask_(u,t))fail_('PERMISSION_DENIED','Task outside assigned scope');return t;}
+function task_(id,u){const t=rows_('04_EVIDENCE_TRACKER').find(x=>x.id===id);if(!t||t.active==='NO'||!canTask_(u,t))fail_('PERMISSION_DENIED','Task outside assigned scope');return t;}
 function document_(id,u){const d=rows_('06_DOCUMENT_REGISTER').find(x=>x.id===id);if(!d)fail_('FILE_NOT_FOUND','Document not found');
  if(u.role==='SUPPLIER_USER'){const t=rows_('04_EVIDENCE_TRACKER').find(x=>x.id===d.task_id);if(!t||!canTask_(u,t)||d.supplier_id!==u.supplier_id)fail_('PERMISSION_DENIED','Document outside supplier scope');}
  else order_(d.case_id,u);if(!documentVisible_(d,u))fail_('PERMISSION_DENIED','Marketing Sales Order view capability required');return d;

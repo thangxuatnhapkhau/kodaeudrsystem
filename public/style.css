@@ -65,3 +65,9 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 .my-tasks-screen .task-panel th:nth-child(4){width:37%}
 .my-tasks-screen td .row{flex-wrap:nowrap;white-space:nowrap}
 .my-tasks-screen td .row button{flex:none}
+/* v2.7 material-source workspace: external styles preserve the existing CSP. */
+.review-result{border:1px solid var(--line,#d8e2de);border-radius:12px;padding:16px;margin-top:16px;overflow-wrap:anywhere}
+.review-outcome{font-weight:700;color:#123d36}.review-assessment{padding:12px 0;border-top:1px solid #d8e2de}
+#traceMessage,#materialReviewMessage{white-space:pre-wrap;overflow-wrap:anywhere}
+#drawerContent fieldset label:has(input[type=checkbox]){display:flex;align-items:flex-start;gap:8px}
+#drawerContent fieldset label input[type=checkbox]{width:auto;flex-shrink:0}

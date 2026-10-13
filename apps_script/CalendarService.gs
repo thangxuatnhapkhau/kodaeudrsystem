@@ -17,6 +17,7 @@ function calendarPatch_(event,body){
 }
 // Advanced Calendar API; deterministic event IDs survive retries after partial failure.
 function syncTaskCalendar_(t){
+ if(t.active==='NO')t={...t,due:''};
  if(!t.due&&!t.calendar_event_id)return {status:'NOT_SCHEDULED'};
  const calendarId=PropertiesService.getScriptProperties().getProperty('CALENDAR_ID')||config_('GOOGLE_CALENDAR_ID');if(!calendarId)return {status:'CALENDAR_ACCESS_REQUIRED'};
  const c=rows_('01_SO_MASTER').find(c=>c.id===t.case_id),m=rows_('02_SO_ITEM_MATERIAL').find(m=>m.id===t.material_id);if(!c||t.material_id&&!m)return {status:'INVALID_TASK'};
