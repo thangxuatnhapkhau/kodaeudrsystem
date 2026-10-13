@@ -14,7 +14,7 @@ const translations={
   FIREBASE_UNAVAILABLE:'Firebase verification is temporarily unavailable. Try again.'
  },
  vi:{
-  'Customer PO allocations':'Phân bổ PO khách hàng','Customer PO#':'PO khách hàng','Destination':'Điểm nhận hàng','SKU / Product code':'SKU / mã sản phẩm','Add Customer PO':'Thêm PO khách hàng','Extract one product per S/No. with separate customer PO quantities and materials. Review the preview before saving. NON_WOOD is excluded; confirm UNKNOWN.':'Trích một sản phẩm cho mỗi S/No. cùng số lượng phân bổ riêng theo PO khách hàng và vật liệu. Kiểm tra preview trước khi lưu. NON_WOOD được loại trừ; cần xác nhận UNKNOWN.','I have checked each product, customer PO, quantity and material against the original PDF.':'Tôi đã đối chiếu từng sản phẩm, PO khách hàng, số lượng và vật liệu với PDF gốc.',
+  'Customer code':'Mã khách hàng','Shipment Date':'Ngày giao hàng dự kiến','I have checked Customer, Shipment Date, each product, customer PO, quantity and material against the original PDF.':'Tôi đã đối chiếu khách hàng, ngày giao hàng, từng sản phẩm, PO khách hàng, số lượng và vật liệu với PDF gốc.','Customer PO allocations':'Phân bổ PO khách hàng','Customer PO#':'PO khách hàng','Destination':'Điểm nhận hàng','SKU / Product code':'SKU / mã sản phẩm','Add Customer PO':'Thêm PO khách hàng','Extract one product per S/No. with separate customer PO quantities and materials. Review the preview before saving. NON_WOOD is excluded; confirm UNKNOWN.':'Trích một sản phẩm cho mỗi S/No. cùng số lượng phân bổ riêng theo PO khách hàng và vật liệu. Kiểm tra preview trước khi lưu. NON_WOOD được loại trừ; cần xác nhận UNKNOWN.','I have checked each product, customer PO, quantity and material against the original PDF.':'Tôi đã đối chiếu từng sản phẩm, PO khách hàng, số lượng và vật liệu với PDF gốc.',
   'Sync task invitations':'Đồng bộ lời mời Google Calendar','Evidence deadlines for your role. Assigned owners and reviewers receive Google Calendar invitations; they may need to accept an invitation email. Click a date to see its tasks.':'Hạn chứng từ theo vai trò của bạn. Người phụ trách và người rà soát được giao sẽ nhận lời mời Google Calendar; có thể cần chấp nhận email mời. Nhấn vào ngày để xem task.','Task invitations checked. Recipients may need to accept their Google Calendar email invitations.':'Đã kiểm tra lời mời task. Người nhận có thể cần chấp nhận email mời từ Google Calendar.',
   'Removed.':'Đã xóa khỏi danh sách.','Confirm Remove':'Xác nhận xóa','Reason for removal':'Lý do xóa','I have checked the selected record.':'Tôi đã kiểm tra đúng mục cần xóa.',
   'REMOVE_CHILDREN_FIRST':'Hãy xóa các quan hệ con của mục này trước.','REMOVE_HAS_HISTORY':'Quan hệ đã có chứng từ hoặc GEO; không thể xóa lịch sử này.','REMOVE_ASSIGNED_TASKS':'Các task của quan hệ đã được phân công hoặc xử lý; hãy rà soát trước khi xóa.','REMOVE_MATERIAL_LINKED':'Material còn quan hệ, task, chứng từ hoặc GEO; hãy xử lý các liên kết trước.','REMOVE_SUPPLIER_LINKED':'Supplier còn liên kết với quan hệ, chứng từ hoặc User; hãy xử lý các liên kết trước.','REMOVE_USER_ASSIGNED':'Hãy chuyển giao Order, task hoặc upload đang xử lý trước khi xóa User.','REMOVE_USER_LOGIN':'Chưa vô hiệu hóa được tài khoản đăng nhập; User vẫn ở trạng thái tắt, hãy thử lại.','SCHEMA_MISMATCH':'Cấu trúc Sheet chưa được cập nhật; Admin cần chạy migration theo hướng dẫn gói cập nhật.','EXPORT_ORPHANED_EVIDENCE':'Chứng từ thiếu liên kết Material, Relationship hoặc Evidence Type; hãy rà soát trước khi xuất.', 'Excluded evidence with missing links:':'Đã loại chứng từ thiếu liên kết:',
@@ -308,6 +308,19 @@ Object.assign(v27Labels,{
  'Quantity used':'Số lượng sử dụng',
  'Customer (optional)':'Khách hàng (không bắt buộc)',
  'Due date (optional)':'Hạn nộp (không bắt buộc)'
+});
+Object.assign(v27Labels,{
+ 'Material / PO / lot dossier · up to 100 MB/PDF':'Hồ sơ theo vật liệu / PO / lô · tối đa 100 MB/PDF',
+ 'Legacy · whole SO':'Bản cũ · toàn bộ SO',
+ 'Upload documents for this material':'Upload chứng từ cho vật liệu',
+ 'PDFs are linked to the selected PO/lot.':'PDF sẽ được gắn với PO/lô đã chọn.',
+ 'PO/lot unknown: PDFs are stored under this material. Verify and link the correct source before AI review.':'Chưa xác định PO/lô: PDF được lưu vào material này, chờ bạn kiểm tra và gắn đúng nguồn trước khi AI đánh giá.',
+ 'Upload PDFs to this material':'Upload PDF vào material',
+ 'Stop / pause upload':'Dừng / tạm ngưng upload',
+ 'PDFs awaiting source assignment':'PDF chưa xác định nguồn',
+ 'Confirm link to selected PO/lot':'Xác nhận gắn vào PO/lô đang chọn',
+ 'No PDFs awaiting source assignment.':'Không có PDF chờ gắn nguồn.',
+ 'Confirm the PO/lot source before AI review. You can upload PDFs up to 100 MB each now.':'Cần xác nhận nguồn PO/lô trước khi chạy AI đánh giá. Có thể upload PDF 100 MB/file ngay bây giờ.'
 });
 Object.assign(translations.vi,v27Labels);
 Object.entries(v27Labels).forEach(([en,vi])=>{translations.en[vi]=en;});
