@@ -2,6 +2,7 @@ export const HEADERS=['Order No','S/No','SKU (PO#)','Product','Quantity','UOM','
 export async function script(src,globalName){if(globalThis[globalName])return globalThis[globalName];await new Promise((resolve,reject)=>{const tag=document.createElement('script');tag.src=src;tag.onload=resolve;tag.onerror=()=>reject(Error('Không tải được công cụ xử lý file.'));document.head.append(tag);});return globalThis[globalName];}
 const abort=signal=>{if(signal?.aborted)throw new DOMException('Đã dừng xử lý','AbortError');};
 export function textLines(items){const rows=[];for(const item of items.filter(i=>i.str)){const y=item.transform[5],row=rows.find(r=>Math.abs(r.y-y)<2);if(row)row.items.push(item);else rows.push({y,items:[item]});}return rows.sort((a,b)=>b.y-a.y).map(r=>r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(' ')).join('\n');}
+export function corruptTextLayer(text){const visible=String(text||'').replace(/\s/g,'');if(visible.length<30)return false;const broken=(visible.match(/[\uFFFD\uE000-\uF8FF\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)||[]).length;return broken>=2&&broken/visible.length>=.005;}
 export async function readPDF(file,{signal,progress=()=>{},maxPages=300,maxChars=700000,forceOCR=false,loadPDF=()=>import('/vendor/pdfjs/pdf.min.mjs'),createOCR}={}){
  await globalThis.EudrDossier.validatePdf(file);const sha256=await globalThis.EudrDossier.hash(file);abort(signal);
  const pdfjs=await loadPDF();abort(signal);pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.mjs';
@@ -17,7 +18,7 @@ export async function readPDF(file,{signal,progress=()=>{},maxPages=300,maxChars
   for(let n=1;n<=pdf.numPages;n++){
    abort(signal);progress({page:n,total:pdf.numPages,stage:'Đọc text'});
    const page=await pdf.getPage(n),content=await page.getTextContent();let text=textLines(content.items),method='TEXT',confidence=100;
-   if(forceOCR||text.replace(/\s/g,'').length<30){
+   if(forceOCR||text.replace(/\s/g,'').length<30||corruptTextLayer(text)){
     if(!worker){if(createOCR)worker=await createOCR();else{const tess=await script('/vendor/ocr/tesseract.min.js','Tesseract');worker=await tess.createWorker('eng+vie',1,{workerPath:'/vendor/ocr/worker.min.js',corePath:'/vendor/ocr/core',langPath:'/vendor/ocr/lang',workerBlobURL:false,logger:m=>progress({page:n,total:pdf.numPages,stage:'OCR · '+m.status,progress:m.progress})});}}
     abort(signal);const base=page.getViewport({scale:1}),scale=Math.min(2,3000/Math.max(base.width,base.height)),viewport=page.getViewport({scale}),canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
     try{await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;const result=await worker.recognize(canvas);text=result.data.text||'';confidence=Number(result.data.confidence)||0;method=text.trim()?confidence<65?'OCR_LOW':'OCR':'UNREADABLE';}
