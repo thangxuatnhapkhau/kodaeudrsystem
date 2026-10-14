@@ -115,6 +115,8 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 .chat-index{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border:1px solid #d3ded5;border-radius:12px;background:#f7faf7;padding:.85rem 1rem}
 .chat-index button{width:auto}.chat-index details{width:100%}.chat-index progress{width:100%;height:6px}
 .chat-index progress[value="0"]{display:none}
+.chat-empty-note{display:flex;align-items:center;justify-content:space-between;gap:1rem;border:1px solid #ecd6aa;border-radius:10px;background:#fff9eb;padding:.8rem 1rem}
+.chat-empty-note p{margin:0;color:#76552a}.chat-empty-note button{flex:none}
 .chat-columns{display:grid;grid-template-columns:minmax(190px,260px) minmax(0,1fr);gap:1.25rem;min-height:420px}
 .chat-history{border-right:1px solid #d3ded5;padding-right:1rem}
 .chat-history h3{margin-top:0}.chat-history #chatAnswers{display:grid;gap:.5rem}
@@ -128,6 +130,6 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 .workspace-chat #chatForm{max-width:none;display:flex;align-items:end;gap:.75rem}
 .workspace-chat #chatForm label{flex:1}.workspace-chat #chatForm textarea{width:100%;min-height:5rem;resize:vertical;margin-bottom:0}
 .workspace-chat #chatForm button{margin-bottom:0}
-@media(max-width:700px){.chat-heading{display:block}.chat-heading label{max-width:none}.chat-columns{grid-template-columns:1fr}.chat-history{border-right:0;border-bottom:1px solid #d3ded5;padding:0 0 1rem}.chat-history #chatAnswers{display:flex;overflow-x:auto}.chat-history button{min-width:140px}.workspace-chat #chatForm{display:block}.workspace-chat #chatForm button{margin-top:.6rem}}
+@media(max-width:700px){.chat-heading{display:block}.chat-heading label{max-width:none}.chat-empty-note{display:block}.chat-empty-note button{margin-top:.6rem}.chat-columns{grid-template-columns:1fr}.chat-history{border-right:0;border-bottom:1px solid #d3ded5;padding:0 0 1rem}.chat-history #chatAnswers{display:flex;overflow-x:auto}.chat-history button{min-width:140px}.workspace-chat #chatForm{display:block}.workspace-chat #chatForm button{margin-top:.6rem}}
 .chain-proposal{margin:1rem 0;padding:1rem;border:1px solid var(--border,#d6dfd9);border-radius:12px}
 .chain-proposal li{overflow-wrap:anywhere;margin:.5rem 0}
