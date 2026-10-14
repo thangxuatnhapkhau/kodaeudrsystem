@@ -30,7 +30,9 @@ export async function handler(event){
  let body;try{body=JSON.parse(event.body);}catch{return error(400,'INVALID_JSON','Invalid JSON',requestId);}
  if(!body||!actions.has(body.action)||!Array.isArray(body.args)||body.args.length>3)return error(400,'UNKNOWN_ACTION','Unknown action',requestId);
  if(body.requestKey!==undefined&&!/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestKey))return error(400,'INVALID_INPUT','Invalid request key',requestId);
- const payload=JSON.stringify({ts:Date.now(),nonce:requestId,actor:actor.trim().toLowerCase(),authUid,action:body.action,args:body.args,requestKey:body.requestKey||requestId,origin});
+ // Sign an ASCII JSON wire string so Apps Script hashes exactly the same bytes for
+ // Vietnamese questions and other Unicode input. JSON.parse restores the input.
+ const payload=JSON.stringify({ts:Date.now(),nonce:requestId,actor:actor.trim().toLowerCase(),authUid,action:body.action,args:body.args,requestKey:body.requestKey||requestId,origin}).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
  const signature=createHmac('sha256',secret).update(payload).digest('hex');
  const started=Date.now();
  try{
