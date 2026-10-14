@@ -103,12 +103,31 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 .material-dossier .review-result{background:#fff;margin-top:12px}
 .material-dossier #materialReviewMessage:not(:empty){padding:12px 14px;margin-top:17px;border-radius:9px;background:#eaf3eb;color:#244b33}
 @media(max-width:600px){.material-dossier-section{padding:18px 0}.material-dossier-head h2{font-size:21px}.material-results-head button{width:100%}.material-dossier-actions button{flex:1 1 160px}}
-.workspace-chat{display:grid;gap:1rem;max-width:56rem;margin:auto}
-.workspace-chat textarea{width:100%;min-height:6rem;resize:vertical}
-.workspace-chat progress{width:100%}
-.workspace-chat #chatAnswers{display:flex;flex-wrap:wrap;gap:.5rem}
-.workspace-chat #chatResult{border:1px solid var(--border,#d6dfd9);border-radius:12px;padding:1rem;background:var(--surface,#fff)}
+.order-tabs{display:flex;gap:.4rem;border-bottom:1px solid #d3ded5;margin:1.25rem 0 1rem;padding:0 .5rem}
+.order-tabs button{border:0;border-radius:9px 9px 0 0;background:transparent;color:var(--muted);padding:.85rem 1.25rem}
+.order-tabs button[aria-selected="true"]{color:var(--green);background:#edf5ef;box-shadow:inset 0 -3px var(--green)}
+.order-tabs button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+#orderEvidencePanel[hidden],#orderChatPanel[hidden]{display:none}
+.workspace-chat{display:grid;gap:1rem;width:100%;margin:0}
+.chat-heading{display:flex;justify-content:space-between;align-items:start;gap:2rem}
+.chat-heading p{max-width:58rem;color:var(--muted)}
+.chat-heading label{min-width:210px}
+.chat-index{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border:1px solid #d3ded5;border-radius:12px;background:#f7faf7;padding:.85rem 1rem}
+.chat-index button{width:auto}.chat-index details{width:100%}.chat-index progress{width:100%;height:6px}
+.chat-index progress[value="0"]{display:none}
+.chat-columns{display:grid;grid-template-columns:minmax(190px,260px) minmax(0,1fr);gap:1.25rem;min-height:420px}
+.chat-history{border-right:1px solid #d3ded5;padding-right:1rem}
+.chat-history h3{margin-top:0}.chat-history #chatAnswers{display:grid;gap:.5rem}
+.chat-history button{text-align:left;display:grid;gap:.2rem;width:100%;background:#f7faf7;color:var(--ink);border:1px solid #d3ded5;border-radius:9px}
+.chat-history button[aria-pressed="true"]{border-color:var(--green);background:#edf5ef}
+.chat-history button small{color:var(--muted)}
+.chat-conversation{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.workspace-chat #chatResult{flex:1;min-height:220px;border:1px solid #d3ded5;border-radius:12px;padding:1.25rem;background:#fff;overflow-wrap:anywhere}
 .workspace-chat .chat-answer{white-space:pre-wrap;line-height:1.6}
 .workspace-chat #chatResult li{overflow-wrap:anywhere;margin:.4rem 0}
+.workspace-chat #chatForm{max-width:none;display:flex;align-items:end;gap:.75rem}
+.workspace-chat #chatForm label{flex:1}.workspace-chat #chatForm textarea{width:100%;min-height:5rem;resize:vertical;margin-bottom:0}
+.workspace-chat #chatForm button{margin-bottom:0}
+@media(max-width:700px){.chat-heading{display:block}.chat-heading label{max-width:none}.chat-columns{grid-template-columns:1fr}.chat-history{border-right:0;border-bottom:1px solid #d3ded5;padding:0 0 1rem}.chat-history #chatAnswers{display:flex;overflow-x:auto}.chat-history button{min-width:140px}.workspace-chat #chatForm{display:block}.workspace-chat #chatForm button{margin-top:.6rem}}
 .chain-proposal{margin:1rem 0;padding:1rem;border:1px solid var(--border,#d6dfd9);border-radius:12px}
 .chain-proposal li{overflow-wrap:anywhere;margin:.5rem 0}
