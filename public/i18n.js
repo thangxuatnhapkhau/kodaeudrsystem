@@ -71,6 +71,12 @@ const translations={
   'INVALID_INPUT':'Thông tin không hợp lệ. Kiểm tra các trường và thử lại.','INVALID_FILE':'Tệp không hợp lệ. Vui lòng chọn PDF phù hợp.','DUPLICATE_ORDER':'Đơn hàng đã tồn tại. Mở đơn hàng hiện có.','EXISTING_FOLDER_REVIEW_REQUIRED':'Hãy chọn thư mục đơn hàng có sẵn sau khi kiểm tra.','REQUEST_TOO_LARGE':'Yêu cầu vượt giới hạn dung lượng.','PERMISSION_DENIED':'Bạn không có quyền thực hiện thao tác này.','AUTH_REQUIRED':'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.','PASSWORD_CHANGE_REQUIRED':'Vui lòng đổi mật khẩu trước khi vào workspace.','UPSTREAM_UNAVAILABLE':'Không thể kết nối hệ thống. Thử lại với cùng yêu cầu.','CONFIG_REQUIRED':'Hệ thống chưa được cấu hình. Liên hệ quản trị.','AUTH_FAILED':'Không thể đăng nhập. Kiểm tra thông tin và thử lại.','WEAK_PASSWORD':'Mật khẩu cần có ít nhất 12 ký tự.','ACCOUNT_EXISTS':'Tài khoản đã được tạo.','FILE_TOO_LARGE':'Tệp vượt giới hạn dung lượng.'
  }
 };
+Object.assign(translations.vi,{
+ 'Ask KODA AI':'Hỏi KODA AI','Answers use this Order, its registered PDF documents and the selected material. Each PDF must be indexed before asking.':'Câu trả lời dùng dữ liệu của đơn hàng, PDF đã đăng ký và vật liệu được chọn. Hãy lập chỉ mục PDF trước khi hỏi.',
+ 'Scope':'Phạm vi','Whole Order':'Toàn bộ đơn hàng','Selected material':'Vật liệu đang chọn','Selected PO / lot':'PO / lô đang chọn','indexed':'đã lập chỉ mục','need indexing':'cần lập chỉ mục','PDFs needing OCR':'PDF cần OCR','Index PDFs from Drive':'Lập chỉ mục PDF từ Drive',
+ 'Your question':'Câu hỏi của bạn','Ask':'Gửi câu hỏi','Recent answers':'Câu trả lời gần đây','Answer':'Câu trả lời','Human verification remains required.':'Cần người phụ trách xác minh.','Refresh this answer after the AI worker completes.':'Làm mới câu trả lời sau khi AI xử lý.','Index complete. Ask a question.':'Đã lập chỉ mục. Bạn có thể đặt câu hỏi.','Question queued. You may return later to view the answer.':'Đã xếp lượt câu hỏi. Bạn có thể quay lại xem kết quả.',
+ 'Organize document groups':'Tự phân nhóm chứng từ','Organizing':'Đang phân nhóm','draft document groups saved':'nhóm chứng từ nháp đã lưu','uncertain groups need review':'nhóm chưa chắc chắn cần kiểm tra','Proposed supply chain':'Chuỗi cung ứng AI đề xuất','cited transactions':'giao dịch có trích dẫn','Review each branch before saving.':'Kiểm tra từng nhánh trước khi lưu.','Review and create supply chain':'Kiểm tra và tạo chuỗi cung ứng','Review proposed supply chain':'Kiểm tra chuỗi AI đề xuất','Supplier transactions':'Giao dịch giữa các supplier','I checked these suppliers and transactions against the original PDFs. Create draft links for this material and source.':'Tôi đã đối chiếu supplier và giao dịch với PDF gốc. Tạo liên kết nháp cho vật liệu và nguồn này.','Create draft supply chain':'Tạo chuỗi cung ứng nháp','Draft supply chain saved. Verify lot, quantities, origin and GEO.':'Đã lưu chuỗi nháp. Cần kiểm tra lô, số lượng, nguồn gốc và GEO.'
+});
 let language=localStorage.getItem('eudr_language')||(/^vi\b/i.test(navigator.language)?'vi':'en');
 if(!['en','vi'].includes(language))language='en';
 const originalText=new WeakMap();
@@ -363,6 +369,32 @@ Object.assign(v27Labels,{
  'Prompt is unavailable. Create a new review prompt.':'Chưa có nội dung prompt. Hãy tạo một prompt đánh giá mới.',
  'Select the prompt and copy it manually.':'Hãy chọn nội dung prompt và sao chép thủ công.',
  'Prompt ready. Copy it or open ChatGPT.':'Prompt đã sẵn sàng. Sao chép hoặc mở ChatGPT.'
+});
+Object.assign(v27Labels,{
+ 'View saved prompt':'Xem lại prompt đã lưu',
+ 'Saved prompt loaded.':'Đã mở lại prompt đã lưu.',
+ 'Waiting for a result in Drive. Click Refresh results from Drive after ChatGPT saves it.':'Đang chờ kết quả trên Drive. Sau khi ChatGPT lưu xong, nhấn Làm mới kết quả từ Drive.'
+});
+Object.assign(v27Labels,{
+ 'Split and classify pages':'Tách trang và phân nhóm chứng từ',
+ 'Review the original PDF pages before confirming a block.':'Kiểm tra các trang PDF gốc trước khi xác nhận nhóm chứng từ.',
+ 'From page':'Từ trang','To page':'Đến trang','Document type':'Loại chứng từ',
+ 'Evidence block':'Nhóm chứng từ',
+ '01 · Commercial / Shipping':'01 · Thương mại / Giao hàng',
+ '02 · FSC / Certification':'02 · FSC / Chứng nhận',
+ '03 · Transport':'03 · Vận chuyển',
+ '04 · Geolocation':'04 · Tọa độ rừng',
+ 'I checked the original PDF pages and confirm this range and evidence block.':'Tôi đã kiểm tra trang PDF gốc và xác nhận khoảng trang cùng nhóm chứng từ này.',
+ 'Save split PDF':'Lưu PDF đã tách','Cancel':'Hủy',
+ 'The original PDF is retained. Link the split copy to the matching evidence task after saving.':'PDF gốc được giữ nguyên. Sau khi lưu, gắn bản tách vào task chứng từ phù hợp.',
+ 'Check the page range and confirm the evidence block.':'Kiểm tra khoảng trang và xác nhận nhóm chứng từ.',
+ 'The original PDF changed. Refresh the review before splitting.':'PDF gốc đã thay đổi. Hãy làm mới lượt đánh giá trước khi tách.',
+ 'Saving split PDF...':'Đang lưu PDF đã tách...',
+ 'Split PDF saved. Link it to the matching evidence task.':'Đã lưu PDF đã tách. Hãy gắn vào task chứng từ phù hợp.',
+ 'Link to evidence task':'Gắn vào task chứng từ',
+ 'Select evidence block':'Chọn nhóm chứng từ',
+ 'Review proposed section':'Kiểm tra và tách phần được đề xuất',
+ 'Unclassified':'Chưa phân nhóm'
 });
 Object.assign(translations.vi,v27Labels);
 Object.entries(v27Labels).forEach(([en,vi])=>{translations.en[vi]=en;});
