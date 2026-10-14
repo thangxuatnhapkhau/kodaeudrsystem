@@ -72,6 +72,8 @@ const translations={
  }
 };
 Object.assign(translations.vi,{
+ 'The AI cited a source outside the available PDF pages or Order records. The answer was rejected; ask again after this update.':'AI trích dẫn trang PDF hoặc dòng dữ liệu không có trong phạm vi được phép. Hệ thống đã từ chối câu trả lời; hãy hỏi lại sau khi cập nhật bản này.',
+ 'The AI provider was temporarily unavailable. Please ask again later.':'Dịch vụ AI tạm thời không phản hồi. Vui lòng hỏi lại sau.',
  'Order sections':'Các mục của đơn hàng','Evidence workspace':'Chứng từ & vật liệu','Select a saved answer or ask a question.':'Chọn câu trả lời đã lưu hoặc đặt câu hỏi mới.',
  'No PDF is linked to this material or PO/lot. The Order has registered PDFs.':'Chưa có PDF liên kết với vật liệu hoặc PO/lô này. Đơn hàng có PDF đã đăng ký.','No registered PDF is linked to this material or PO/lot.':'Chưa có PDF đã đăng ký liên kết với vật liệu hoặc PO/lô này.','No registered PDF is available in this Order. PDFs stored only in Drive folders must first be linked to the Order.':'Đơn hàng chưa có PDF nào được đăng ký để AI đọc. PDF chỉ nằm trong thư mục Drive cần được liên kết vào đơn hàng trước.','Use Whole Order PDFs':'Dùng PDF của toàn đơn hàng',
  'Ask KODA AI':'Hỏi KODA AI','Answers use this Order, its registered PDF documents and the selected material. Each PDF must be indexed before asking.':'Câu trả lời dùng dữ liệu của đơn hàng, PDF đã đăng ký và vật liệu được chọn. Hãy lập chỉ mục PDF trước khi hỏi.',
