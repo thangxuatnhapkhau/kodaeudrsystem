@@ -3,7 +3,7 @@
 function calendarInvitees_(t){
  const active=rows_('05_OWNER_MASTER').filter(u=>u.active==='YES'&&!u.removed_at),byEmail=new Map(active.map(u=>[String(u.email).toLowerCase(),u]));
  const order=rows_('01_SO_MASTER').find(c=>c.id===t.case_id),creator=String(order?.owner||'').toLowerCase();
- const admins=active.filter(u=>u.role==='ADMIN').map(u=>u.email),marketing=byEmail.get(creator)?.role==='MARKETING'?[creator]:[];
+ const admins=active.filter(u=>u.role==='ADMIN').map(u=>u.email),marketing=active.filter(u=>u.role==='MARKETING'&&order&&(u.email===creator||assigned_(u,order.id))).map(u=>u.email);
  const recipients=[t.owner,t.assigned_reviewer,...admins,...marketing].filter(Boolean).map(x=>String(x).trim().toLowerCase());
  // The deploying account already owns this Calendar and can view every event.
  const organizer=String(Session.getEffectiveUser().getEmail()||'').trim().toLowerCase();

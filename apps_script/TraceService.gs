@@ -2,8 +2,8 @@
 function previewV27Migration(){const result=migrateV27(true);console.log(JSON.stringify(result));return result;}
 function applyV27Migration(){const result=migrateV27(false);console.log(JSON.stringify(result));return result;}
 function v27MigrationPlan_(){
- return Object.keys(SCHEMA).map(n=>{
-  const s=db_().getSheetByName(n),expected=SCHEMA[n],last=s?s.getLastColumn():0;
+ return Object.keys(V27_SCHEMA_).map(n=>{
+  const s=db_().getSheetByName(n),expected=V27_SCHEMA_[n],last=s?s.getLastColumn():0;
   // getLastColumn() also sees values in rows below empty header cells. Earlier
   // releases could write override_* data before migrateV23 named those columns.
   const header=s&&last?s.getRange(1,1,1,last).getValues()[0]:[];
@@ -26,9 +26,9 @@ function migrateV27(dryRun){
   if(dryRun!==false)return {version:'2.7.0',dryRun:true,plan,records_changed:0};
   for(const p of plan){
    let s=db_().getSheetByName(p.table);
-   if(!s){s=db_().insertSheet(p.table);s.appendRow(SCHEMA[p.table]);s.setFrozenRows(1);}
+   if(!s){s=db_().insertSheet(p.table);s.appendRow(V27_SCHEMA_[p.table]);s.setFrozenRows(1);}
    else if(p.append.length){
-    if(s.getMaxColumns()<SCHEMA[p.table].length)s.insertColumnsAfter(s.getMaxColumns(),SCHEMA[p.table].length-s.getMaxColumns());
+    if(s.getMaxColumns()<V27_SCHEMA_[p.table].length)s.insertColumnsAfter(s.getMaxColumns(),V27_SCHEMA_[p.table].length-s.getMaxColumns());
     // Writes row 1 only; any already populated rows beneath unnamed columns survive.
     s.getRange(1,p.existing+1,1,p.append.length).setValues([p.append]);
    }
@@ -82,3 +82,9 @@ function applyMaterialRemoval(id,input){const u=requireCapability_('MATERIAL_EDI
 function linkSourceRecord(sourceId,input){const u=requireCapability_(input.type==='GEO'?'GEO_EDIT':'EVIDENCE_UPLOAD');traceInternal_(u);return withOperation_(()=>{const source=rows_('29_MATERIAL_SOURCES').find(s=>s.id===sourceId);if(!source)fail_('INVALID_INPUT','Source missing');const {s,m,c}=traceSource_(sourceId,source.material_id,u);traceWritable_(c);const table=input.type==='GEO'?'17_GEO_LOCATIONS':input.type==='TASK'?'04_EVIDENCE_TRACKER':input.type==='DOCUMENT'?'06_DOCUMENT_REGISTER':'';if(!table)fail_('INVALID_INPUT','Record type invalid');let record=rows_(table).find(r=>r.id===input.id);if(!record||record.active==='NO'||record.case_id!==c.id||record.material_id&&record.material_id!==m.id||false)fail_('INVALID_INPUT','Record outside source; existing source linkage cannot be replaced');if(input.type==='DOCUMENT')document_(record.id,u);if(input.type==='TASK'&&!canTask_(u,record))fail_('PERMISSION_DENIED','Task unavailable');if(input.confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Confirm record applies to this PO/lot');if(input.type==='TASK'&&record.source_id&&record.source_id!==s.id){const id=stable_('source-task:'+record.id+':'+s.id),existing=rows_(table).find(t=>t.id===id);const supplierId=record.chain_node_id?record.supplier_id:s.supplier_id||record.supplier_id,assigned=rows_('05_OWNER_MASTER').find(o=>o.email===record.owner);if(!existing)add_(table,{...record,id,supplier_id:supplierId,owner:assigned?.role==='SUPPLIER_USER'&&assigned.supplier_id!==supplierId?'':record.owner,source_id:s.id,status:'MISSING',document_id:'',calendar_event_id:'',calendar_sync_status:'',submitted_at:'',reviewed_at:'',reviewed_by:'',note:'Source-specific copy of requirement '+record.id,created_at:now_(),updated_at:now_(),active:'YES'});auditOnce_('SOURCE_TASK_CREATED',c.id,id,record.id,JSON.stringify({source_id:s.id}),u);return {id,cloned:true};}const linkId=stable_('source-record:'+s.id+':'+input.type+':'+record.id);if(!rows_('34_SOURCE_RECORD_LINKS').some(l=>l.id===linkId))add_('34_SOURCE_RECORD_LINKS',{id:linkId,case_id:c.id,material_id:m.id,source_id:s.id,record_type:input.type,record_id:record.id,active:'YES',created_at:now_(),created_by:u.email});if(!record.source_id)patch_(table,record.id,{source_id:s.id,...(input.type==='DOCUMENT'?{material_id:m.id}:{})});auditOnce_('SOURCE_RECORD_LINKED',c.id,record.id,'',JSON.stringify({source_id:s.id,type:input.type}),u);return {id:record.id};});}
 
 function recordMatchesSource_(record,type,sourceId){return record.source_id===sourceId||rows_('34_SOURCE_RECORD_LINKS').some(l=>l.record_type===type&&l.record_id===record.id&&l.source_id===sourceId&&l.active!=='NO');}
+
+// Actual live additive product allocation column, verified 2026-10-14.
+if(!SCHEMA['24_SO_PRODUCTS'].includes('customer_po_allocations_json'))SCHEMA['24_SO_PRODUCTS'].push('customer_po_allocations_json');
+
+// Freeze the historical migration; it must not create v2.9 tables.
+const V27_SCHEMA_=Object.fromEntries(Object.entries(SCHEMA).filter(([name])=>Number(name.slice(0,2))<35).map(([name,headers])=>[name,headers.slice()]));

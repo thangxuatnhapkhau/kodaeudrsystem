@@ -1,0 +1,25 @@
+DANH SÁCH FILE CẦN CẬP NHẬT — v2.8 → v2.9.0
+
+20 file chạy ứng dụng: 12 Apps Script, 7 public, 1 Netlify function.
+THÊM: 8 file. THAY THẾ: 12 file.
+
+THAY THẾ  apps_script/AIService.gs
+THAY THẾ  apps_script/Bridge.gs
+THAY THẾ  apps_script/CalendarService.gs
+THÊM MỚI  apps_script/ClassificationService.gs
+THÊM MỚI  apps_script/CustomerSubmissionService.gs
+THÊM MỚI  apps_script/IntelligencePolicyService.gs
+THÊM MỚI  apps_script/IntelligenceService.gs
+THÊM MỚI  apps_script/IssueService.gs
+THÊM MỚI  apps_script/ReviewBridgeService.gs
+THAY THẾ  apps_script/TraceService.gs
+THÊM MỚI  apps_script/V290Migration.gs
+THAY THẾ  apps_script/WorkspaceChatService.gs
+THAY THẾ  public/app.js
+THAY THẾ  public/i18n.js
+THAY THẾ  public/index.html
+THÊM MỚI  public/intelligence.js
+THAY THẾ  public/pdf-preview.mjs
+THAY THẾ  public/style.css
+THAY THẾ  public/workspace-chat.js
+THAY THẾ  netlify/functions/call.mjs

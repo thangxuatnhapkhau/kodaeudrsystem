@@ -1,5 +1,5 @@
 // Self-hosted PDF.js canvas preview. No browser PDF plugin, srcdoc, or inline CSS/JS.
-export async function renderPdfPreview(host,data,{signal,loadLibrary=()=>import('/vendor/pdfjs/pdf.min.mjs')}={}){
+export async function renderPdfPreview(host,data,{signal,initialPage=1,loadLibrary=()=>import('/vendor/pdfjs/pdf.min.mjs')}={}){
  if(signal?.aborted)return ()=>{};
  const pdfjs=await loadLibrary();
  if(signal?.aborted)return ()=>{};
@@ -42,7 +42,7 @@ export async function renderPdfPreview(host,data,{signal,loadLibrary=()=>import(
   }
   previous.onclick=()=>show(currentPage-1).catch(showError);
   next.onclick=()=>show(currentPage+1).catch(showError);
-  await show(1);
+  await show(initialPage);
   return cleanup;
  }catch(error){cleanup();if(signal?.aborted)return cleanup;throw error;}
 }

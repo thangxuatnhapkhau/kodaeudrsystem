@@ -1,0 +1,187 @@
+{
+  "package": "KODA EUDR v2.8 to v2.9.0 — files to update only",
+  "release_status": "STAGING_CANDIDATE",
+  "runtime_file_count": 20,
+  "replace_count": 12,
+  "add_count": 8,
+  "reference": "Drive nested apps_script/public/netlify source read on 2026-10-14; optional known v2.8.8 AI patch hashes included",
+  "deployed_source_equivalence_verified": false,
+  "dependency_changes": false,
+  "files": [
+    {
+      "path": "apps_script/AIService.gs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "642c077fd014dbe0039cd0e44358536393c2fbdd2aa5714c83eaaa187438326e",
+        "325416c502b63576df73ec6c6a19370b3d7155f9100fc15b9b43123d515be1af"
+      ],
+      "sha256_after": "1c3930b8e87e0e7fb1bb163d5f945c316e381871b8b8be1c795ba9b4ff2aa1b6",
+      "size_bytes": 19664
+    },
+    {
+      "path": "apps_script/Bridge.gs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "1ac96ff3ba94907863f86b112c9020dc0d62477c9e81d4c31bd971326b1dfe6e"
+      ],
+      "sha256_after": "6dc78ea6fc9571a95c72a5d5417022ebee1309e8ff7099cfc62a9f216cf7cb90",
+      "size_bytes": 5106
+    },
+    {
+      "path": "apps_script/CalendarService.gs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "399ff8af9e2c0b9c6e8470f247ce141a1b9480e2f063b5595a2b2a5f68065400"
+      ],
+      "sha256_after": "d48c554f26a2a25456692217f851b4286b441c66ce2c109c450f532e891d5d71",
+      "size_bytes": 6462
+    },
+    {
+      "path": "apps_script/ClassificationService.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "3afa55b0adc33ce1ac218f206592c847e27160768b171609756db2bed8e2e16e",
+      "size_bytes": 11150
+    },
+    {
+      "path": "apps_script/CustomerSubmissionService.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "b23da06604c98f04f6ff84c2abde6558a4cd7cd853249c12617a8ffda471c61e",
+      "size_bytes": 27905
+    },
+    {
+      "path": "apps_script/IntelligencePolicyService.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "fc418238a4fa646df51978f4930edb0dc2d48feadf669d1cc50db048fcf93471",
+      "size_bytes": 2591
+    },
+    {
+      "path": "apps_script/IntelligenceService.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "589c3633fca49a6656e5d644858948864cc7316c8427aad001509d2475c92e53",
+      "size_bytes": 12726
+    },
+    {
+      "path": "apps_script/IssueService.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "0d3b1b87aee3284aed137539fc50de014110d8b05b1c18df64357b7a62526337",
+      "size_bytes": 7496
+    },
+    {
+      "path": "apps_script/ReviewBridgeService.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "56d02da5adc76ac2eb6d8136086f19d124568854efbb1e13574f94432cab1793",
+      "size_bytes": 16809
+    },
+    {
+      "path": "apps_script/TraceService.gs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "c5a875928e5419b7a60369dada5b60ecdc16513a6bcf7aa9a4bb6dfbf49f85a0"
+      ],
+      "sha256_after": "1465b2a3d8e5fc39e5978162358a9ba1b48a9de5d4f1638e3580286cea3626fc",
+      "size_bytes": 25352
+    },
+    {
+      "path": "apps_script/V290Migration.gs",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "0b89808b0f71a51158053d80f69581f31217dec854f88e8c3012a2e401671e2b",
+      "size_bytes": 6297
+    },
+    {
+      "path": "apps_script/WorkspaceChatService.gs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "7f85f4544fbbc1a84d20e75bd4a6b7b3a34b6541570cff0bf18ae4778e0cf33b"
+      ],
+      "sha256_after": "0e0c64e2fbaf7092601e933b93f100bf9bfb2c8574e3259da83a7c21d67413f6",
+      "size_bytes": 15335
+    },
+    {
+      "path": "public/app.js",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "fc0c55352817522fe579f0eec9172fa7186f9e6a1151f5a7d92d92bff2f6e268"
+      ],
+      "sha256_after": "d58a92de5d1d86f08148e7d96c3d1688df6e74268db9a12519c57e5c8ffbf15a",
+      "size_bytes": 111453
+    },
+    {
+      "path": "public/i18n.js",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "3e7990c52340c7d6b834d707fedd3687f449596e7bd0dc0fe624e93daa71c7eb",
+        "af69b10bd3edf9c7644c019c2fb9eceea6d375d17b8ec4d3f3d6b04733f1e7d2"
+      ],
+      "sha256_after": "94faeac499b68d9f839701131c37f70720dadd73bd9e03512ab8d94c2965c5ba",
+      "size_bytes": 75174
+    },
+    {
+      "path": "public/index.html",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "3f53450f365ccde46eb0838675921c6c77a885a88a36f55cdef37b26d1acf2b2"
+      ],
+      "sha256_after": "1361baab8892ed92bb8c8a47f32371d3d86415a5381ba60a10154c4a25d653cf",
+      "size_bytes": 2289
+    },
+    {
+      "path": "public/intelligence.js",
+      "action": "ADD",
+      "known_reference_sha256_before": [],
+      "sha256_after": "c45de77559487fdb6c762b914f9f15f1c72aebb218b7fb53981f4f7df204e73f",
+      "size_bytes": 26616
+    },
+    {
+      "path": "public/pdf-preview.mjs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "381f20c253d5f4db4e64a6c26aa2e82857a8c5c82e1858bd72895866159d381d"
+      ],
+      "sha256_after": "6f00071e7af65e87a24702ff7cbcdc415f88803c029b682802bc840509091605",
+      "size_bytes": 3467
+    },
+    {
+      "path": "public/style.css",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "9d611e5b701e2b2b009b3487d2c7d5cf0f3f25d97ddb9d0fb5577ba0684e9d68"
+      ],
+      "sha256_after": "c1e6a7e6d31c85b77e51d0d43049aa148205db93991547188bfa18657a1b7d1b",
+      "size_bytes": 41875
+    },
+    {
+      "path": "public/workspace-chat.js",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "48040a39f5dac0fd3d839b09259b3ad9afe01b32bb4f18b95d7b86475f6b8404",
+        "1d77fb92096c6cc5d0db218fd138402363ae11dbfa7ce8c4f65812c2e3f1f241"
+      ],
+      "sha256_after": "197d42c7622a3f891881ffeabaf6d6b59eab4832c8f3f32afffa063605490a17",
+      "size_bytes": 7153
+    },
+    {
+      "path": "netlify/functions/call.mjs",
+      "action": "REPLACE",
+      "known_reference_sha256_before": [
+        "55ffcf047a25da1b61f92f5fef24069aa227f1ad393a67125582182063183a60"
+      ],
+      "sha256_after": "1af28a13921ff22b0505a544016b4f581080d54fcb5f087f8b7eeb47e7bb6bb4",
+      "size_bytes": 8798
+    }
+  ],
+  "overlay_validation": {
+    "baseline_plus_this_delta": true,
+    "javascript_tests": 228,
+    "passed": 228,
+    "failed": 0,
+    "harness": "Full v2.9 QA harness; not distributed in minimal deploy package",
+    "source_parse": "PASSED"
+  }
+}
