@@ -11,11 +11,81 @@ window.EudrIntelligence=(()=>{
   function shell(title,body){pdfCleanup?.();mount.innerHTML=`<section class="card intelligence-panel"><header><p class="eyebrow">${esc(mode.toUpperCase())}</p><h2>${esc(tr(title))}</h2><p class="muted">${esc(tr('Human verification remains required.'))}</p></header><p id="intelligenceMessage" role="status" aria-live="polite"></p>${body}</section>`;window.EudrI18n?.translateUI(mount);}
   const button=(label,id)=>`<button type="button" id="${id}">${esc(tr(label))}</button>`,parseFile=async(file,max)=>{if(!file||file.size>max)throw Error('Select a file within the size limit');return file.text();};
   async function load(){if(!alive())return;data=mode==='customer'?await call('getKodaCustomerWorkspace',caseId):mode==='classify'?null:await call('getKodaReviewDashboard',caseId,scope);if(!alive())return;if(mode==='review')review();else if(mode==='issues')issues();else if(mode==='customer')customer();else classification();}
-  function review(){const imported=data.reviews.filter(r=>r.result);shell('AI Review',`<div class="intelligence-metrics"><div><b>${data.evidence_coverage.approved}/${data.evidence_coverage.required}</b><span>${esc(tr('Evidence coverage'))}</span></div><div><b>${data.review_progress.current}</b><span>${esc(tr('Current reviews'))}</span></div><div><b>${data.review_progress.stale}</b><span>STALE</span></div><div><b>NOT DETERMINED</b><span>${esc(tr('Human compliance determination'))}</span></div></div><div class="row">${button('Prepare ChatGPT Business Review','reviewPrepare')}${button('Refresh affected scope','reviewRefresh')}</div><form id="reviewImport"><label>${esc(tr('Review Pack'))}<select name="review_id" required>${data.reviews.filter(r=>r.status==='PREPARED').map(r=>`<option value="${esc(r.id)}">${esc(r.id)} · ${esc(r.created_at)}</option>`).join('')}</select></label><label>${esc(tr('ChatGPT result JSON'))}<input name="result" type="file" accept=".json,application/json" required></label><button>${esc(tr('Validate and import'))}</button></form><div>${imported.map(r=>`<article class="review-run"><h3>${esc(r.id)} · ${esc(r.status)}</h3><p>${esc(r.result.summary)}</p><div class="scroll"><table><thead><tr><th>${esc(tr('Dimension'))}</th><th>${esc(tr('Status'))}</th><th>${esc(tr('Assessment'))}</th></tr></thead><tbody>${r.result.assessments.map(a=>`<tr><td>${esc(a.dimension)}</td><td>${esc(a.status)}</td><td>${esc(a.summary)}<p>${esc(a.reason)}</p></td></tr>`).join('')}</tbody></table></div>${r.result.findings.map(f=>`<article class="finding-card"><h4>${esc(f.dimension)} · ${esc(f.severity)}</h4><p>${esc(f.observed_value)}</p><p>${esc(f.reason)}</p><p>${esc(f.recommended_action)}</p><div>${f.citations.map(c=>`<button type="button" data-citation="${esc(c.document_id)}" data-page="${c.page}">${esc(c.document_id)} · ${esc(tr('page'))} ${c.page}</button>`).join('')}</div>${has('AI_REVIEW')&&r.status==='IMPORTED'?`<button type="button" data-issue-review="${esc(r.id)}" data-finding="${esc(f.finding_id)}">${esc(tr('Confirm finding and create Issue'))}</button>`:''}</article>`).join('')}${button('Prepare follow-up review','followup-'+r.id)}</article>`).join('')||`<p>${esc(tr('No imported review yet.'))}</p>`}</div><div id="reviewPrepared"></div>`);
-   $('reviewPrepare').onclick=()=>run(()=>prepare(scope));$('reviewRefresh').onclick=()=>run(async()=>{const r=await call('refreshKodaReviewScope',caseId,scope);await load();message(r.stale_review_ids.length+' '+tr('stale reviews'));});
-   async function prepare(input){const r=await call('prepareKodaBusinessReview',caseId,input);await load();if(!alive())return;$('reviewPrepared').innerHTML=`<h3>${esc(tr('Review Pack prepared'))}</h3><p>${esc(r.id)}</p>${button('Download Review Pack','reviewDownload')}${button('Copy review instruction','reviewCopy')}`;$('reviewDownload').onclick=()=>window.EudrWorkspaceChat.download(r.id+'_REVIEW_PACK.json',r.pack);$('reviewCopy').onclick=()=>run(async()=>{await navigator.clipboard.writeText(r.instruction);message(tr('Review instruction copied.'));});}
-   $('reviewImport').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.target);run(async()=>{await call('importKodaBusinessReview',fd.get('review_id'),await parseFile(fd.get('result'),180000));await load();message(tr('Review imported. Evidence remains pending human approval.'));});};
-   mount.querySelectorAll('[data-issue-review]').forEach(b=>b.onclick=()=>run(async()=>{if(!window.confirm(tr('Confirm this finding as a proposed Issue?')))return;await call('createKodaReviewIssue',b.dataset.issueReview,{finding_id:b.dataset.finding,confirmed:true});await load();message(tr('Issue created for review.'));}));
+  let receiveTimer=null,receiveCursor='',receiveFailures=0;
+  const waitingReviews=()=>data?.reviews.filter(r=>r.status==='PREPARED'&&r.can_receive!==false)||[];
+  const reviewError=error=>{
+   if(error.code==='WRONG_REVIEW_FILE')return tr('This is the input pack. Send the review request to ChatGPT; the completed result will return here automatically.');
+   if(['STALE_REVIEW','DOCUMENT_VERSION_MISMATCH','REVIEW_SCOPE_MISMATCH'].includes(error.code))return tr('The documents changed. Start a new ChatGPT review.');
+   if(error.code==='DUPLICATE_RETURN_FILES')return tr('Several results were returned for this review. Ask the administrator to select the intended file.');
+   return tr('The returned result could not be validated. Ask ChatGPT to follow the review request exactly, or contact the administrator.');
+  };
+  function scheduleReceive(){
+   window.clearTimeout(receiveTimer);receiveTimer=null;
+   if(mode!=='review'||!alive()||document.visibilityState==='hidden'||!waitingReviews().length)return;
+   receiveTimer=window.setTimeout(()=>receiveResults(false),Math.min(120000,30000*Math.pow(2,receiveFailures)));
+  }
+  async function receiveResults(manual){
+   if(document.visibilityState==='hidden'&&!manual){scheduleReceive();return;}
+   if(!alive()||mode!=='review'||busy){scheduleReceive();return;}
+   if(!waitingReviews().length){if(manual){await run(()=>load());}scheduleReceive();return;}
+   await run(async()=>{
+    let result;
+    try{result=await call('syncKodaBusinessReviewResults',caseId,{...scope,cursor:receiveCursor});receiveFailures=0;}
+    catch(e){receiveFailures=Math.min(2,receiveFailures+1);throw e;}
+    if(!alive())return;
+    receiveCursor=result.next_cursor||'';
+    if(result.imported.length||result.errors.length)await load();
+    if(result.errors.length)message(reviewError(result.errors[0]));
+    else if(result.imported.length)message(tr('ChatGPT results received. Review the findings below. Evidence still requires human approval.'));
+    else if(manual)message(tr('Still waiting for ChatGPT to save the completed result. You do not need to upload a file here.'));
+   });
+   scheduleReceive();
+  }
+  async function copyReviewInstruction(instruction){
+   if(!alive())return;
+   try{
+    if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(instruction);
+    if(alive())message(tr('Request copied. Open ChatGPT, paste and send it. The result will return here automatically after ChatGPT saves it.'));
+   }catch{
+    if(!alive())return;
+    const box=$('reviewPrepared');box.replaceChildren();
+    const label=document.createElement('label');label.textContent=tr('Copy this request into ChatGPT');
+    const text=document.createElement('textarea');text.readOnly=true;text.rows=8;text.value=instruction;
+    label.append(text);box.append(label);text.focus();text.select();
+    message(tr('Automatic copying is unavailable. Press Ctrl+C to copy the selected request, then paste it into ChatGPT.'));
+   }
+  }
+  function review(){
+   const imported=data.reviews.filter(r=>r.result),pending=waitingReviews();
+   const recovery=state.user.role==='ADMIN'?`<details id="reviewRecovery"><summary>${esc(tr('Administrator recovery tools'))}</summary><p>${esc(tr('Use only when the Drive return connection is unavailable. Select a completed result, never the input Review Pack.'))}</p><form id="reviewImport"><label>${esc(tr('Review Pack'))}<select name="review_id" required>${pending.map(r=>`<option value="${esc(r.id)}">${esc(r.id)} · ${esc(r.created_at)}</option>`).join('')}</select></label><label>${esc(tr('ChatGPT result JSON'))}<input name="result" type="file" accept=".json,application/json" required></label><button>${esc(tr('Validate and import'))}</button></form></details>`:'';
+   shell('AI Review',`<div class="intelligence-metrics"><div><b>${data.evidence_coverage.approved}/${data.evidence_coverage.required}</b><span>${esc(tr('Evidence coverage'))}</span></div><div><b>${data.review_progress.current}</b><span>${esc(tr('Current reviews'))}</span></div><div><b>${data.review_progress.stale}</b><span>STALE</span></div><div><b>NOT DETERMINED</b><span>${esc(tr('Human compliance determination'))}</span></div></div>
+    <p>${esc(tr('Send the prepared request to ChatGPT Business. ChatGPT saves the completed result through the approved Drive connection; this page receives it automatically.'))}</p>
+    <div class="row">${button('Start ChatGPT review','reviewPrepare')}<a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">${esc(tr('Open ChatGPT'))}</a>${button('Check for results','reviewReceive')}${button('Refresh affected scope','reviewRefresh')}</div>
+    <div id="reviewPrepared"></div>
+    <div id="reviewWaiting" role="status" aria-live="polite">${pending.map(r=>`<article class="review-run"><h3>${esc(tr('Waiting for ChatGPT result'))}</h3><p>${esc(r.created_at)}</p><p>${esc(tr('Results are checked automatically while this tab is visible and when you return. No file import is needed.'))}</p><button type="button" data-copy-review="${esc(r.id)}">${esc(tr('Copy request for ChatGPT'))}</button></article>`).join('')}</div>
+    <div>${imported.map(r=>`<article class="review-run"><h3>${esc(r.id)} · ${esc(r.status)}</h3><p>${esc(r.result.summary)}</p><div class="scroll"><table><thead><tr><th>${esc(tr('Dimension'))}</th><th>${esc(tr('Status'))}</th><th>${esc(tr('Assessment'))}</th></tr></thead><tbody>${r.result.assessments.map(a=>`<tr><td>${esc(a.dimension)}</td><td>${esc(a.status)}</td><td>${esc(a.summary)}<p>${esc(a.reason)}</p></td></tr>`).join('')}</tbody></table></div>${r.result.findings.map(f=>`<article class="finding-card"><h4>${esc(f.dimension)} · ${esc(f.severity)}</h4><p>${esc(f.observed_value)}</p><p>${esc(f.reason)}</p><p>${esc(f.recommended_action)}</p><div>${f.citations.map(c=>`<button type="button" data-citation="${esc(c.document_id)}" data-page="${c.page}">${esc(c.document_id)} · ${esc(tr('page'))} ${c.page}</button>`).join('')}</div>${has('AI_REVIEW')&&r.status==='IMPORTED'?`<button type="button" data-issue-review="${esc(r.id)}" data-finding="${esc(f.finding_id)}">${esc(tr('Confirm finding and create Issue'))}</button>`:''}</article>`).join('')}${button('Prepare follow-up review','followup-'+r.id)}</article>`).join('')||`<p>${esc(tr('No review result yet.'))}</p>`}</div>${recovery}`);
+   $('reviewPrepare').onclick=()=>run(()=>prepare(scope));
+   $('reviewReceive').onclick=()=>receiveResults(true);
+   $('reviewRefresh').onclick=()=>run(async()=>{const r=await call('refreshKodaReviewScope',caseId,scope);await load();message(r.stale_review_ids.length+' '+tr('stale reviews'));scheduleReceive();});
+   async function prepare(input){
+    const r=await call('prepareKodaBusinessReview',caseId,input);await load();
+    if(!alive())return;
+    await copyReviewInstruction(r.instruction);scheduleReceive();
+   }
+   mount.querySelectorAll('[data-copy-review]').forEach(b=>b.onclick=()=>run(async()=>{
+    const r=await call('prepareKodaBusinessReviewDelivery',b.dataset.copyReview);
+    await copyReviewInstruction(r.instruction);scheduleReceive();
+   }));
+   if($('reviewImport'))$('reviewImport').onsubmit=e=>{
+    e.preventDefault();const fd=new FormData(e.target);
+    run(async()=>{
+     try{await call('importKodaBusinessReview',fd.get('review_id'),await parseFile(fd.get('result'),180000));}
+     catch(error){message(reviewError(error));return;}
+     await load();message(tr('Review imported. Evidence remains pending human approval.'));scheduleReceive();
+    });
+   };
+   mount.querySelectorAll('[data-issue-review]').forEach(b=>b.onclick=()=>run(async()=>{if(!window.confirm(tr('Confirm this finding as a proposed Issue?')))return;await call('createKodaReviewIssue',b.dataset.issueReview,{finding_id:b.dataset.finding,confirmed:true});await load();message(tr('Issue created for review.'));scheduleReceive();}));
    mount.querySelectorAll('[data-citation]').forEach(b=>b.onclick=()=>openDocument(b.dataset.citation,Number(b.dataset.page)));
    imported.forEach(r=>{$('followup-'+r.id).onclick=()=>run(()=>prepare({...scope,material_id:r.material_id,source_id:r.source_id,previous_review_id:r.id}));});
   }
@@ -47,7 +117,13 @@ window.EudrIntelligence=(()=>{
    const add=(o={})=>{const div=document.createElement('fieldset');div.innerHTML=select('operation','Operation',['Assembly','Component production','Purchased material','Subcontracted manufacturing','Subcontracted operation'],o.operation)+field('factory_id','Factory','text',o.factory_id)+field('quantity','Operation quantity','number',o.quantity)+field('quantity_uom','UOM','text',o.quantity_uom)+field('date','Operation date','date',o.date)+select('evidence_ids','Operation evidence',docs.filter(d=>d.status==='APPROVED').map(d=>[d.id,d.name]),o.evidence_ids||[],true)+`<button type="button">${esc(tr('Remove'))}</button>`;div.querySelector('button').onclick=()=>div.remove();$('operationRows').append(div);};list(m.operations_json).forEach(add);$('operationAdd').onclick=()=>add();
    $('mappingForm').onsubmit=e=>{e.preventDefault();const form=e.target,fd=new FormData(form),refs=fd.getAll('required_document_ids'),input={...Object.fromEntries(fd),id:m.id,expected_updated_at:m.updated_at,confirmed:true,verified:form.elements.verified.checked,bom_complete:form.elements.bom_complete.checked,plot_scope_complete:form.elements.plot_scope_complete.checked,required_document_ids:refs,document_clearance:[...form.querySelectorAll('[data-clearance]')].filter(f=>refs.includes(f.dataset.clearance)&&f.querySelector('[name="customer_sharing_approved"]').checked).map(f=>({document_id:f.dataset.clearance,customer_sharing_approved:true,confidentiality_reviewed:true,contains_price:f.querySelector('[name="contains_price"]').checked})),operations:[...$('operationRows').children].map(r=>({operation:r.querySelector('[name="operation"]').value,factory_id:r.querySelector('[name="factory_id"]').value,quantity:Number(r.querySelector('[name="quantity"]').value),quantity_uom:r.querySelector('[name="quantity_uom"]').value,date:r.querySelector('[name="date"]').value,evidence_ids:[...r.querySelector('[name="evidence_ids"]').selectedOptions].map(o=>o.value)})),geo_rule_clarification:fd.get('geo_clarification')?{confirmed:true,reference:fd.get('geo_clarification'),legal_polygon_threshold_ha:4}:{}};run(async()=>{await call('saveKodaCustomerMapping',caseId,input);await load();message(tr('Customer mapping saved.'));});};
   }
-  current.abort.signal.addEventListener('abort',()=>pdfCleanup?.(),{once:true});await load();
+  const resumeReceive=()=>{if(document.visibilityState!=='hidden')receiveResults(false);};
+  current.abort.signal.addEventListener('abort',()=>{pdfCleanup?.();window.clearTimeout(receiveTimer);document.removeEventListener('visibilitychange',resumeReceive);window.removeEventListener('focus',resumeReceive);},{once:true});
+  await load();
+  if(mode==='review'&&alive()){
+   document.addEventListener('visibilitychange',resumeReceive);window.addEventListener('focus',resumeReceive);
+   await receiveResults(false);
+  }
  }
  return {open,stop};
 })();

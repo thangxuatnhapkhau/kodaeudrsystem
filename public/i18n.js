@@ -448,3 +448,29 @@ Object.assign(translations.vi,{
  'I reviewed confidentiality and authorize Customer sharing of this version.':'Tôi đã kiểm tra thông tin bí mật và cho phép gửi phiên bản này cho khách hàng.','Contains price; verified redaction is required.':'Có thông tin giá; phải xác minh file đã che giá.','All actual BOM components are included.':'Đã bao gồm toàn bộ thành phần BOM thực tế.','All harvest plots are included.':'Đã bao gồm toàn bộ vùng khai thác.','Customer clarification reference for 4/5 ha discrepancy':'Chứng cứ khách hàng làm rõ chênh lệch ngưỡng 4/5 ha','I verified this Customer mapping.':'Tôi đã xác minh liên kết dữ liệu khách hàng.','I confirm the Customer PO and Product.':'Tôi xác nhận PO và sản phẩm khách hàng.','Save Customer mapping':'Lưu liên kết khách hàng',
  'Review imported. Evidence remains pending human approval.':'Đã nhập kết quả. Chứng từ vẫn cần người có thẩm quyền duyệt.','Original PDF unchanged; evidence still requires review.':'File PDF gốc không thay đổi; chứng từ vẫn cần đánh giá.','Package exported. Upload to NeoCondo remains manual.':'Đã xuất gói hồ sơ. Việc upload NeoCondo được thực hiện thủ công.'
 });
+
+// v2.9.1 automatic review return labels.
+Object.assign(translations.vi,{
+ 'Review in your approved ChatGPT Business workspace. The completed result will return automatically to AI Review after it is saved through Drive.':'Gửi yêu cầu trong ChatGPT Business đã được phê duyệt. Kết quả sẽ tự quay về tab Đánh giá AI sau khi ChatGPT lưu thành công qua Drive.',
+ 'Start ChatGPT review':'Bắt đầu kiểm tra bằng ChatGPT',
+ 'Open ChatGPT':'Mở ChatGPT',
+ 'Check for results':'Kiểm tra kết quả',
+ 'Waiting for ChatGPT result':'Đang chờ kết quả từ ChatGPT',
+ 'Copy request for ChatGPT':'Sao chép yêu cầu gửi ChatGPT',
+ 'No review result yet.':'Chưa có kết quả kiểm tra.',
+ 'Administrator recovery tools':'Công cụ hỗ trợ dành cho Admin',
+ 'Use only when the Drive return connection is unavailable. Select a completed result, never the input Review Pack.':'Chỉ dùng khi kết nối nhận kết quả qua Drive chưa hoạt động. Chọn kết quả đã kiểm tra, không chọn gói đầu vào Review Pack.',
+ 'Send the prepared request to ChatGPT Business. ChatGPT saves the completed result through the approved Drive connection; this page receives it automatically.':'Gửi yêu cầu đã chuẩn bị sang ChatGPT Business. ChatGPT lưu kết quả qua kết nối Drive đã được cấp quyền; trang này sẽ tự nhận kết quả.',
+ 'Results are checked automatically while this tab is visible and when you return. No file import is needed.':'Trang tự kiểm tra kết quả khi đang mở và khi bạn quay lại. Bạn không cần tải hay nhập file kết quả.',
+ 'Request copied. Open ChatGPT, paste and send it. The result will return here automatically after ChatGPT saves it.':'Đã sao chép yêu cầu. Mở ChatGPT, dán và gửi. Kết quả sẽ tự hiện tại đây sau khi ChatGPT lưu thành công.',
+ 'Copy this request into ChatGPT':'Sao chép yêu cầu này sang ChatGPT',
+ 'Automatic copying is unavailable. Press Ctrl+C to copy the selected request, then paste it into ChatGPT.':'Trình duyệt chưa cho phép sao chép tự động. Nhấn Ctrl+C để sao chép phần đã chọn, sau đó dán vào ChatGPT.',
+ 'ChatGPT results received. Review the findings below. Evidence still requires human approval.':'Đã nhận kết quả từ ChatGPT. Xem các phát hiện bên dưới. Chứng từ vẫn cần người có thẩm quyền duyệt.',
+ 'Still waiting for ChatGPT to save the completed result. You do not need to upload a file here.':'Đang chờ ChatGPT lưu kết quả kiểm tra. Bạn không cần upload file tại đây.',
+ 'This is the input pack. Send the review request to ChatGPT; the completed result will return here automatically.':'Đây là gói đầu vào, chưa phải kết quả. Hãy gửi yêu cầu kiểm tra sang ChatGPT; kết quả sẽ tự quay về đây.',
+ 'The documents changed. Start a new ChatGPT review.':'Chứng từ hoặc dữ liệu đã thay đổi. Hãy tạo lượt kiểm tra ChatGPT mới.',
+ 'Several results were returned for this review. Ask the administrator to select the intended file.':'Có nhiều file kết quả cho cùng lượt kiểm tra. Nhờ Admin xác định file cần dùng.',
+ 'The returned result could not be validated. Ask ChatGPT to follow the review request exactly, or contact the administrator.':'Kết quả trả về chưa đúng yêu cầu kiểm tra. Yêu cầu ChatGPT thực hiện đúng hướng dẫn đã gửi hoặc liên hệ Admin.',
+ 'Review in your approved ChatGPT Business workspace, then import the JSON in AI Review.':'Gửi yêu cầu trong ChatGPT Business đã được phê duyệt. Kết quả được tự nhận tại tab Đánh giá AI sau khi ChatGPT lưu qua Drive.',
+ WRONG_REVIEW_FILE:'Đây là gói đầu vào Review Pack, chưa phải kết quả ChatGPT. Hãy sao chép yêu cầu sang ChatGPT để thực hiện kiểm tra.'
+});

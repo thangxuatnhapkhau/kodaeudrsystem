@@ -1,78 +1,77 @@
-# Cập nhật v2.8 → v2.9.0 — chỉ các file cần thay đổi
+# KODA EUDR v2.9.1 — ChatGPT trả kết quả về AI Review
 
-Gói này có **20 file ứng dụng: 12 file thay thế, 8 file thêm mới**. Đường dẫn giữ nguyên cấu trúc repository. Không có bản demo, node_modules, tài liệu audit dài hoặc file ứng dụng không thay đổi.
+Gói bổ sung cho hệ thống đã cập nhật v2.9.0. Chỉ gồm 7 file runtime cần thay, hướng dẫn này và danh sách SHA-256. Đây không phải toàn bộ website để upload trực tiếp lên Netlify Drop.
 
-| Vị trí | Số file | Thao tác |
-|---|---:|---|
-| `apps_script/` | 12 | Thay 5 file hiện có; tạo thêm 7 file .gs |
-| `public/` | 7 | Thay 6 file; thêm `intelligence.js` |
-| `netlify/functions/` | 1 | Thay `call.mjs` |
+## Vấn đề đã sửa
 
-Tên từng file và thao tác THÊM MỚI / THAY THẾ nằm trong `DANH_SACH_FILE.txt`. Hash của file đích và những bản gốc đã đối chiếu nằm trong `DANH_SACH_FILE.json`.
+Ảnh báo INVALID_REVIEW_SCHEMA / Missing field at $.model_review_context do người dùng chọn file *_REVIEW_PACK.json trong ô kết quả. Review Pack là đầu vào gửi ChatGPT, không phải kết quả đã kiểm tra. Bản sửa nhận biết nhầm file này và hiển thị hướng dẫn rõ ràng.
 
-## 1. Chép file vào bản 2.8 đang có
+Luồng chính không còn yêu cầu chọn file JSON hay bấm Validate and import. Công cụ import thủ công chỉ còn trong phần hỗ trợ của Admin, mặc định thu gọn.
 
-1. Sao lưu repository, Apps Script source/properties và database đang dùng.
-2. Với repository: chép `public/`, `netlify/` và `apps_script/` trong gói vào đúng thư mục tương ứng của bản 2.8. Cho phép ghi đè các file trùng tên. Giữ nguyên các file khác.
-3. Với Apps Script đang chạy: nội dung thư mục `apps_script/` trong GitHub chưa tự cập nhật project Google Apps Script. Phải cập nhật đúng 5 file cũ và tạo thêm đủ 7 file .gs trong cùng project, hoặc dùng quy trình đồng bộ Apps Script hiện có. Không xóa các service cũ khác.
+## Cập nhật
 
-**Không kéo riêng ZIP này vào Netlify Drop hoặc thay toàn bộ repository bằng nội dung ZIP.** Đây là gói bổ sung cho bản 2.8; các file không thay đổi như vendor PDF/OCR, font/WASM, ảnh/logo, Firebase functions, `appsscript.json`, `Code.gs`, `Migration.gs`, `netlify.toml` và template Excel vẫn phải có trong bản cũ.
+1. Sao lưu 7 file hiện tại trước khi thay.
+2. Trong Apps Script, thay TOÀN BỘ nội dung của đúng 2 file:
+   - apps_script/ReviewBridgeService.gs
+   - apps_script/Bridge.gs
+3. Save → Deploy → Manage deployments → Edit deployment hiện tại → chọn New version → Deploy. Giữ deployment hiện tại để URL bridge không đổi.
+4. Trong thư mục/GitHub repository đang deploy Netlify, chép đè 5 file còn lại đúng đường dẫn:
+   - netlify/functions/call.mjs
+   - public/intelligence.js
+   - public/workspace-chat.js
+   - public/i18n.js
+   - public/index.html
+5. Deploy lại dự án đầy đủ theo cách đang dùng. Không dùng riêng ZIP cập nhật này cho Netlify Drop.
+6. Tải lại website bằng Ctrl+F5. Nhãn phiên bản hiển thị v2.9.1.
 
-Không cần đổi `package.json` / `package-lock.json` hoặc cài dependency mới cho chức năng v2.9. Các thư viện đang dùng ở v2.8 được giữ nguyên. File `Migration.gs` chỉ khác một dòng trắng trong gói đầy đủ nên đã được loại khỏi gói tối giản này.
+KHÔNG chạy lại migration. Không thay V290Migration.gs. Không có bảng/cột mới, không đổi dependencies hay biến môi trường. SCHEMA_VERSION tiếp tục là 2.9.0 vì cấu trúc database không đổi.
 
-## 2. Cấu hình và migration trên staging trước
+## Thao tác của người dùng
 
-Giữ DB_ID, ROOT_ID, CALENDAR_ID, bridge secret, Firebase, origins và URL hiện có ở đúng môi trường. Với staging, dùng bản sao database/Drive và lịch thử nghiệm riêng.
+1. Mở AI Review → Bắt đầu kiểm tra bằng ChatGPT. Yêu cầu được chuẩn bị và sao chép. Nếu trình duyệt chặn clipboard, trang hiển thị yêu cầu đã chọn để người dùng nhấn Ctrl+C.
+2. Bấm Mở ChatGPT, dùng đúng workspace có kết nối Google Drive đã được cấp quyền, dán yêu cầu rồi gửi. Không cần tải Review Pack lên máy; yêu cầu đã có link gói đầu vào và đích lưu kết quả.
+3. ChatGPT đọc gói hồ sơ, kiểm tra tài liệu rồi dùng kết nối Drive lưu file kết quả vào thư mục được chỉ định trong yêu cầu.
+4. Quay lại AI Review để xem nhận xét, trích dẫn và các phát hiện. Không tải hay import JSON thủ công.
 
-Trong Script Properties, mặc định đặt:
+Lượt PREPARED tạo trước bản sửa vẫn dùng được: bấm Sao chép yêu cầu gửi ChatGPT trong thẻ đang chờ. Hệ thống chuẩn bị đích nhận cho lượt cũ và tạo lại hướng dẫn từ đúng gói đã lưu. Nếu dữ liệu đã thay đổi, tạo lượt kiểm tra mới.
 
-```text
-EXTERNAL_AI_ENABLED=false
-AI_ENABLED=false
-```
+Trang tự kiểm tra kết quả khi mở AI Review, khi quay lại tab và khoảng 30 giây/lần trong lúc tab hiển thị và còn lượt chờ. Nếu có lỗi kết nối, khoảng kiểm tra tăng tối đa 120 giây. Trang ngừng kiểm tra khi tab ẩn hoặc rời AI Review. Mỗi lần nhận tối đa một kết quả và kiểm tra tối đa ba lượt, có luân phiên để tránh bỏ quên lượt sau. Không chạy AI ngầm khi đóng website.
 
-Ask nội bộ, Review Pack ChatGPT Business, nhập JSON, classification, Issues, BOM và Customer Submission không cần API key hoặc worker. Các luồng Gemini cũ sẽ không gọi model khi hai flag này tắt.
+## Điều kiện kết nối cần xác minh một lần
 
-Sau khi lưu đủ file .gs:
+ChatGPT phải có action đọc Drive và upload file vào đúng thư mục đích; chỉ tìm thấy tên file hoặc link không đủ. Khả năng này phụ thuộc action được bật trong ChatGPT và quyền Google Drive của tài khoản kết nối. Test bằng một hồ sơ được phép sử dụng trước khi áp dụng cho người dùng khác.
 
-1. Chạy `previewV290Migration()` trong Apps Script editor.
-2. Kiểm tra toàn bộ plan và sao chép `plan_hash` được trả về. Với schema đã đọc ngày 14/10/2026, cần tạo chín tab mới; không dịch cột hay đổi tên bảng cũ.
-3. Sau khi đồng ý áp dụng migration trên môi trường đã chọn, gọi:
+Đây là luồng ChatGPT + kết nối Drive, không phải gọi ChatGPT Business như API. Không yêu cầu OpenAI API key hay Gemini API. Bản cập nhật không thay cấu hình, mở quyền chia sẻ hoặc kết nối tài khoản thay người dùng.
 
-```javascript
-applyV290Migration({confirmed:true,plan_hash:'PLAN_HASH_TU_PREVIEW'});
-```
+Nếu ChatGPT báo NOT_SAVED, kết quả chưa được trả về hệ thống. Nhờ Admin kiểm tra action upload/quyền thư mục; không coi file download trong chat là đã lưu về EUDR. Không bật anyone-with-link chỉ để xử lý lỗi quyền.
 
-Apps Script editor không truyền tham số khi bấm Run. Nếu cần, thêm tạm hàm sau vào editor, thay hash rồi chọn hàm này để Run:
+## Vị trí và kiểm tra kết quả
 
-```javascript
-function runApprovedV290Migration() {
-  return applyV290Migration({
-    confirmed: true,
-    plan_hash: 'PLAN_HASH_TU_PREVIEW'
-  });
-}
-```
+Mỗi lượt có thư mục riêng dưới thư mục Order:
+AI_Work/Business_Reviews/RETURN_<review_id>/
+Tên kết quả: <review_id>_CHATGPT_RESULT.json
 
-Hàm migration tạo backup workbook trước khi thay đổi và ghi ID vào `V290_LAST_BACKUP_ID`. Nếu schema thay đổi, chạy lại preview. Không dùng `previewV27Migration` / `applyV27Migration` để cài v2.9.
+ChatGPT được yêu cầu chỉ lưu kết quả vào đúng đích, không ghi Sheets, không đổi file nguồn hoặc sharing. Hệ thống nhận qua bridge có xác thực, đối chiếu JSON Schema, review ID, phạm vi Order/Material/Source, snapshot hash, phiên bản tài liệu và trích dẫn trước khi hiển thị. Giới hạn kết quả 180.000 UTF-8 bytes. Nếu có nhiều file trùng tên, dừng nhận để Admin xử lý, không tự chọn file.
 
-Trên database production đã nhận diện, migration còn yêu cầu Script Property `V290_PRODUCTION_MIGRATION_APPROVED=true`. Chỉ đặt sau khi người có thẩm quyền phê duyệt thay đổi dữ liệu thật; không đặt để bỏ qua bước kiểm thử.
+Kết quả AI vẫn cần người có quyền rà soát; không tự APPROVED chứng từ, đóng Issue hoặc kết luận tuân thủ EUDR. Gói kết quả đã nhập được lưu riêng và có mã hash. Chứng từ đổi phiên bản thì kết quả cũ không còn được nhận như kết quả hiện hành.
 
-## 3. Deploy Apps Script rồi deploy website
+## Kiểm tra sau deploy
 
-1. Hoàn tất migration và kiểm tra trên staging.
-2. Cập nhật deployment Apps Script bằng version mới. Nếu sửa deployment hiện có, giữ nguyên URL bridge; nếu URL thực sự đổi, cập nhật `APPS_SCRIPT_WEBAPP_URL` tương ứng tại Netlify. Giữ secret ở backend.
-3. Deploy repository đã chép đủ file lên Netlify theo quy trình đang dùng. Deploy frontend sau khi backend và schema đã sẵn sàng.
-4. Kiểm tra đăng nhập Admin, New Order, bốn block chứng từ, Order cũ, upload, Ask không API, Review Pack/import, Issues/Calendar và Customer Submission.
+- User thường không thấy ô chọn JSON ở luồng chính; Admin chỉ thấy trong phần hỗ trợ thu gọn.
+- Bấm sao chép trên lượt cũ nhận hướng dẫn có link Review Pack, hash và thư mục đích cụ thể.
+- ChatGPT lưu thành công file kết quả và trả link thật. Quay lại AI Review thấy kết quả sau khi kiểm tra hợp lệ.
+- Nếu nhập nhầm Review Pack bằng công cụ Admin, thông báo giải thích đây là đầu vào.
+- Chứng từ vẫn giữ trạng thái duyệt hiện tại; không có phê duyệt tự động.
 
-Hướng dẫn này không thực hiện deploy, gửi lời mời Calendar hoặc thay đổi dữ liệu/quyền chia sẻ thật.
+## Validation và giới hạn
 
-## Phạm vi tương thích và trạng thái
+251 kiểm tra JavaScript cục bộ đã qua, gồm 23 kiểm tra bổ sung về nhận kết quả, quyền, phạm vi, hash/phiên bản, file sai loại, file trùng/ quá lớn, retry, giao diện tự đồng bộ và dừng khi ẩn tab. Kiểm tra cú pháp Apps Script/frontend/Netlify đã qua. Các kiểm tra dùng dữ liệu giả lập và service stubs; chưa chạy end-to-end ChatGPT–Drive trên dữ liệu production. Không có production deployment, migration, thay quyền Drive hoặc gọi AI được thực hiện trong quá trình tạo gói này.
 
-Gói được tách bằng đối chiếu source nhánh 2.8 đã cung cấp trong Drive ngày 14/10/2026, có tính đến patch AI v2.8.8. Nhãn website đã thấy là v2.8.2; chưa xác minh được Git commit hoặc Apps Script revision đang deploy. Nếu bản đang dùng có chỉnh sửa riêng sau đó, so sánh trước khi ghi đè; không xem nhãn phiên bản là bằng chứng source giống hệt.
+Tài liệu OpenAI đã đối chiếu ngày 15/10/2026:
+- https://learn.chatgpt.com/docs/build-plugins
+- https://learn.chatgpt.com/docs/enterprise/shared-connections
+Các action/kết nối có thể khác giữa Chat và Work; cần thử trong đúng nơi user sử dụng.
 
-Đã thử dựng lại từ baseline và chép đúng 20 file này, rồi chạy bộ test hiện hành bằng harness của gói đầy đủ. File kiểm thử/harness không nằm trong gói deploy tối giản; dùng gói đầy đủ nếu cần chạy lại đúng bộ QA v2.9.
+## Rollback
 
-Đây vẫn là bản ứng viên staging. Cần xử lý quyền database `anyone with the link — writer` đã ghi nhận trước production theo phê duyệt chủ sở hữu. Không tự đổi legal config đang NOT_REVIEWED thành đã xác minh.
-
-Nếu cần rollback, dùng repository/Apps Script deployment đã sao lưu. Giữ lại các bảng 35–43 và hồ sơ mới để đối chiếu; không tự xóa tab hoặc ghi đè database bằng backup khi chưa kiểm tra giao dịch phát sinh sau nâng cấp.
+Khôi phục đúng 7 file từ bản sao trước cập nhật rồi deploy lại Apps Script và Netlify. Không rollback database: bản này không sửa cấu trúc hoặc migration. Không xóa Review Pack/kết quả đã lưu; lịch sử kiểm tra vẫn ở database v2.9.0.
