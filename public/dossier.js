@@ -21,7 +21,19 @@ window.EudrDossier=(()=>{
   }
   if(signal?.aborted)throw new DOMException('Upload paused','AbortError');progress(file.size,file.size);return call('finishDossierUpload',s.id);
  }
- async function splitPdf(file,sections){const lib=await pdfLibrary(),original=await lib.PDFDocument.load(await file.arrayBuffer());const total=original.getPageCount();if(!sections.length||sections.at(-1).end_page!==total)throw Error('Page count differs from the reviewed dossier.');return {total,async part(section){const output=await lib.PDFDocument.create();output.setCreationDate(new Date('2000-01-01T00:00:00Z'));output.setModificationDate(new Date('2000-01-01T00:00:00Z'));const indexes=Array.from({length:section.end_page-section.start_page+1},(_,i)=>section.start_page-1+i);for(const p of await output.copyPages(original,indexes))output.addPage(p);return new File([await output.save()],`${section.section_id}_${section.document_type.replace(/[^a-zA-Z0-9_-]/g,'_')}_p${section.start_page}-${section.end_page}.pdf`,{type:'application/pdf'});}};}
+ async function splitPdf(file,sections){
+  const lib=await pdfLibrary(),original=await lib.PDFDocument.load(await file.arrayBuffer()),total=original.getPageCount();let next=1;
+  if(!Array.isArray(sections)||!sections.length)throw Error('Page count differs from the reviewed dossier.');
+  for(const s of sections){if(!Number.isSafeInteger(s.start_page)||!Number.isSafeInteger(s.end_page)||s.start_page!==next||s.end_page<s.start_page||s.end_page>total)throw Error('Sections must cover each original page once in order.');next=s.end_page+1;}
+  if(next!==total+1)throw Error('Page count differs from the reviewed dossier.');
+  return {total,async part(section){
+   if(!Number.isSafeInteger(section.start_page)||!Number.isSafeInteger(section.end_page)||section.start_page<1||section.end_page<section.start_page||section.end_page>total||typeof section.document_type!=='string'||!section.document_type||typeof section.section_id!=='string'||!section.section_id)throw Error('Check the page range and document type before splitting.');
+   const output=await lib.PDFDocument.create();output.setCreationDate(new Date('2000-01-01T00:00:00Z'));output.setModificationDate(new Date('2000-01-01T00:00:00Z'));
+   const indexes=Array.from({length:section.end_page-section.start_page+1},(_,i)=>section.start_page-1+i);for(const p of await output.copyPages(original,indexes))output.addPage(p);
+   const safe=x=>x.replace(/[^a-zA-Z0-9_-]/g,'_'),name=safe(file.name.replace(/\.pdf$/i,'')).slice(0,70);
+   return new File([await output.save()],`${name}_${safe(section.section_id)}_${safe(section.document_type)}_p${section.start_page}-${section.end_page}.pdf`,{type:'application/pdf'});
+  }};
+ }
  async function open({id,call,esc,drawer,cap,state,load,getState}){
   let data=await call('getDossierHub',id),controller=null,isClosed=false;
   const tr=x=>window.EudrI18n?.t(x)||x;

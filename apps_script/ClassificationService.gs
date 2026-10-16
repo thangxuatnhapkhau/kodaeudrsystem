@@ -26,7 +26,30 @@ function previewKodaDocumentClassification(documentId){
  }
  for(const section of sections){const body=packet.pages.filter(p=>p.page>=section.start_page&&p.page<=section.end_page).map(p=>p.text).join('\n');section.fields=v290ExtractFields_(body);section.matches=v290SectionMatches_(section,packet.pages,scope.sources);section.matching_confidence=section.matches.length===1?section.matches[0].confidence:'LOW';const names={COMMERCIAL_INVOICE:'INV',PACKING_LIST:'PL',BILL_OF_LADING:'BL',DELIVERY_NOTE:'Delivery Note',CERTIFICATE_OF_ORIGIN:'COO',FSC_CERTIFICATE:'FSC Cert',SUPPLIER_PURCHASE_ORDER:'Purchase Order',SALES_CONTRACT:'Sales Contract',GEOLOCATION_EVIDENCE:'GEO location'};section.evidence_block=BLOCKS_[names[section.document_type]]||'';section.suggested_requirements=scope.tasks.filter(t=>t.evidence===names[section.document_type]).map(t=>({task_id:t.id,source_id:t.source_id||'',requirement_id:t.requirement_id||''}));}
  const snapshot=v290Hash_({document_id:d.id,sha256:d.sha256,version:d.version,packet}),id=stable_('classification:'+d.id+':'+snapshot);
- return {id,case_id:d.case_id,document_id:d.id,sha256:d.sha256,version:Number(d.version),snapshot_hash:snapshot,page_count:packet.page_count,sections,taxonomy:V290_TAXONOMY_,pages:packet.pages.map(p=>({page:p.page,method:p.method,confidence:p.confidence,text:p.text.slice(0,700)})),ocr_state:packet.pages.every(p=>p.text&&['TEXT','OCR'].includes(p.method))?'READABLE':packet.pages.some(p=>p.text)?'PARTIALLY_READABLE':'UNREADABLE'};
+ const saved=rows_('35_DOCUMENT_CLASSIFICATIONS').find(r=>r.id===id);
+ return {id,case_id:d.case_id,document_id:d.id,sha256:d.sha256,version:Number(d.version),snapshot_hash:snapshot,page_count:packet.page_count,saved_classification:saved?{id:saved.id,status:saved.status,sections:JSON.parse(saved.sections_json)}:null,sections,taxonomy:V290_TAXONOMY_,pages:packet.pages.map(p=>({page:p.page,method:p.method,confidence:p.confidence,text:p.text.slice(0,700)})),ocr_state:packet.pages.every(p=>p.text&&['TEXT','OCR'].includes(p.method))?'READABLE':packet.pages.some(p=>p.text)?'PARTIALLY_READABLE':'UNREADABLE'};
+}
+// Only a human-confirmed classification can authorize derived PDF uploads.
+// Classification IDs and original page ranges are retained in the existing upload schema.
+function classificationSplitScope_(caseId,source,metadata,u,forMapping){
+ if(!hasCapability_(u,'EVIDENCE_UPLOAD')&&!(forMapping===true&&hasCapability_(u,'EVIDENCE_REVIEW')))fail_('PERMISSION_DENIED','Evidence upload permission required to create PDF copies');
+ if(metadata.split_confirmed!==true)fail_('HUMAN_CONFIRMATION_REQUIRED','Confirm the original pages and evidence blocks before splitting');
+ v290Ready_();
+ const record=rows_('35_DOCUMENT_CLASSIFICATIONS').find(r=>r.id===metadata.classification_id);
+ if(!record||record.status!=='CONFIRMED'||record.case_id!==caseId||record.document_id!==source.id||source.kind!=='DOSSIER'||source.active_version!=='YES'||record.sha256!==source.sha256||Number(record.version)!==Number(source.version))fail_('VERSION_CONFLICT','Confirmed classification or original PDF changed');
+ const preview=previewKodaDocumentClassification(source.id);
+ if(preview.snapshot_hash!==record.snapshot_hash)fail_('VERSION_CONFLICT','Indexed pages changed; review the current PDF classification');
+ const section=JSON.parse(record.sections_json||'[]').find(s=>s.section_id===metadata.classification_section_id);
+ if(!section||section.document_type==='UNKNOWN'||!EVIDENCE_FOLDERS_.includes(section.evidence_block)||metadata.source_page_range!==section.start_page+'-'+section.end_page||metadata.evidence_block!==section.evidence_block)fail_('INVALID_INPUT','Split range and block must match the confirmed classification');
+ const scope=v290Scope_(caseId,{material_id:source.material_id||''},u),sources=section.source_ids.map(id=>scope.sources.find(s=>s.id===id));
+ if(sources.some(s=>!s))fail_('VERSION_CONFLICT','A confirmed source is no longer available');
+ const materials=[...new Set([source.material_id,...sources.map(s=>s.material_id)].filter(Boolean))];
+ if(materials.length>1)fail_('INVALID_INPUT','One PDF section must belong to one material; separate the page ranges first');
+ if(section.task_ids.some(id=>!scope.tasks.some(t=>t.id===id&&(!t.source_id||section.source_ids.includes(t.source_id)))))fail_('VERSION_CONFLICT','A selected evidence requirement changed');
+ const materialId=materials[0]||'',sourceId=sources.length===1?sources[0].id:(!sources.length?source.source_id||'':'');
+ if(metadata.material_id&&metadata.material_id!==materialId||metadata.source_id&&metadata.source_id!==sourceId)fail_('INVALID_INPUT','Upload material/source differs from the confirmed classification');
+ verifyAIStoredSource_(source);
+ return {range:metadata.source_page_range,block:section.evidence_block,runId:record.id,sectionId:'CLASSIFICATION:'+section.section_id,materialId,sourceId,sourceIds:section.source_ids,taskIds:section.task_ids,documentType:section.document_type,originalSha256:source.sha256,originalVersion:Number(source.version)};
 }
 function saveKodaDocumentClassification(documentId,input){
  const u=v290Internal_();if(!hasCapability_(u,'AI_REVIEW')&&!hasCapability_(u,'EVIDENCE_UPLOAD'))fail_('PERMISSION_DENIED','Document mapping authority required');v290Ready_();const preview=previewKodaDocumentClassification(documentId),d=document_(documentId,u);traceWritable_(order_(d.case_id,u));if(input.snapshot_hash!==preview.snapshot_hash)fail_('VERSION_CONFLICT','Classification source changed');

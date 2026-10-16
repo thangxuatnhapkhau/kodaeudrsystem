@@ -1,0 +1,78 @@
+{
+  "version": "2.9.4",
+  "base_version": "2.9.1",
+  "cumulative_versions": [
+    "2.9.2",
+    "2.9.3"
+  ],
+  "node_tests": {
+    "total": 296,
+    "passed": 296,
+    "failed": 0
+  },
+  "source_syntax": "PASS",
+  "vendored_js_syntax": "PASS",
+  "browser": {
+    "type": "synthetic local Chromium tests, API and map tile requests mocked; not production UAT",
+    "results": [
+      {
+        "name": "desktop-en",
+        "passed": true,
+        "checks": [
+          "Material Dossier entry",
+          "GeoJSON original bytes",
+          "explicit LineString conversion",
+          "registered REVIEW_REQUIRED",
+          "strict CSP",
+          "OSM origin Referer",
+          "responsive layout",
+          "Leaflet zoom"
+        ],
+        "tileRequestsIntercepted": 38,
+        "externalTileRequests": 0
+      },
+      {
+        "name": "mobile-vi",
+        "passed": true,
+        "checks": [
+          "Material Dossier entry",
+          "GeoJSON original bytes",
+          "explicit LineString conversion",
+          "registered REVIEW_REQUIRED",
+          "strict CSP",
+          "OSM origin Referer",
+          "responsive layout",
+          "Leaflet zoom"
+        ],
+        "tileRequestsIntercepted": 18,
+        "externalTileRequests": 0
+      },
+      {
+        "name": "tiles-unavailable",
+        "passed": true,
+        "checks": [
+          "Material Dossier entry",
+          "GeoJSON original bytes",
+          "explicit LineString conversion",
+          "registered REVIEW_REQUIRED",
+          "strict CSP",
+          "OSM origin Referer",
+          "responsive layout",
+          "Leaflet zoom"
+        ],
+        "tileRequestsIntercepted": 60,
+        "externalTileRequests": 0
+      }
+    ]
+  },
+  "delta_overlay_from_v291": "PASS: every runtime byte equals the tested v2.9.4 source",
+  "v293_source_manifest_hashes": "PASS",
+  "production_deployed": false,
+  "migration_required": false,
+  "limitations": [
+    "Browser tests use mocked API and tiles, with no external OSM tile traffic.",
+    "Live Drive/Apps Script UAT and actual ChatGPT-to-Drive delivery are not performed.",
+    "Manual review references still need human original-source verification; software cannot establish the transaction semantics.",
+    "Multipart geometries and polygon holes are preview-only; registration remains Point or single-ring Polygon."
+  ]
+}

@@ -1,50 +1,145 @@
 {
-  "release": "2.9.1",
-  "requires_base": "2.9.0",
-  "schema_version": "2.9.0",
+  "version": "2.9.4",
+  "baseline": "2.9.1",
+  "includes_versions": [
+    "2.9.2",
+    "2.9.3"
+  ],
   "migration_required": false,
-  "files": [
+  "production_deployed": false,
+  "runtime_files_count": 23,
+  "runtime_files": [
     {
-      "path": "apps_script/ReviewBridgeService.gs",
-      "action": "REPLACE",
-      "base_sha256": "56d02da5adc76ac2eb6d8136086f19d124568854efbb1e13574f94432cab1793",
-      "sha256": "e7137785a791f3b9e5e0f6e60fe9ed4c617f372f7c5c2ba192fcebadcab29de6"
+      "path": "apps_script/ClassificationService.gs",
+      "bytes": 14261,
+      "sha256": "940b57d8873382cf3fa9e501893d3c7b340e9c29b4048d191018165e86125d77"
     },
     {
-      "path": "apps_script/Bridge.gs",
-      "action": "REPLACE",
-      "base_sha256": "6dc78ea6fc9571a95c72a5d5417022ebee1309e8ff7099cfc62a9f216cf7cb90",
-      "sha256": "2ed1cd4b83283dae9ad8ffb0609984d836c6a750d246f24d5360b9745646310d"
+      "path": "apps_script/DossierService.gs",
+      "bytes": 40417,
+      "sha256": "187be7410ad77545cf0b406b82a7c121eb6c4561d7168d68b150f29681e8269c"
     },
     {
-      "path": "netlify/functions/call.mjs",
-      "action": "REPLACE",
-      "base_sha256": "1af28a13921ff22b0505a544016b4f581080d54fcb5f087f8b7eeb47e7bb6bb4",
-      "sha256": "05d8677cd6616611e47cf4ce29b5cef3ef720163828507a964dc40b60a73d561"
+      "path": "apps_script/MaterialReviewService.gs",
+      "bytes": 44022,
+      "sha256": "f5c3575fa8e07b132f818289c4266f63d565c071ebda2751c83e5cddebd509e3"
     },
     {
-      "path": "public/intelligence.js",
-      "action": "REPLACE",
-      "base_sha256": "c45de77559487fdb6c762b914f9f15f1c72aebb218b7fb53981f4f7df204e73f",
-      "sha256": "8b77f83c5de246da5ee9e12411d41363b98c3c520000247b7f278ee15d58ae7c"
+      "path": "public/app.js",
+      "bytes": 107414,
+      "sha256": "bf785440d98f6f6ff4c64b635808f8b76895cbe4a0c172a1395b97cf094ef7ca"
     },
     {
-      "path": "public/workspace-chat.js",
-      "action": "REPLACE",
-      "base_sha256": "197d42c7622a3f891881ffeabaf6d6b59eab4832c8f3f32afffa063605490a17",
-      "sha256": "a9bcb6113a1f426e3a171edf6b3cc406ebd6451febf046da94657e4312ec9c45"
+      "path": "public/dossier.js",
+      "bytes": 17822,
+      "sha256": "d8b30d7163e62d86046ec0921082a9070a654a887d62493acaca4121f8dbbe52"
+    },
+    {
+      "path": "public/geo.css",
+      "bytes": 1350,
+      "sha256": "51b0740e2090c6adf9fd349a98a361701b3665c46fc75cf076d4c3e59b40cc0c"
+    },
+    {
+      "path": "public/geo.js",
+      "bytes": 19639,
+      "sha256": "cb7a79459ebbec177a7d290b22fde357dd48733aecf1e70a78ce52d5f9a28b30"
     },
     {
       "path": "public/i18n.js",
-      "action": "REPLACE",
-      "base_sha256": "94faeac499b68d9f839701131c37f70720dadd73bd9e03512ab8d94c2965c5ba",
-      "sha256": "2f973c03cb0aebe25ece8ae6282c21a381e82ead01e48d23519e3528740ee947"
+      "bytes": 89970,
+      "sha256": "f6820b4c56c17e6eef7a71941e36f4487b86dd8e21acbb94890b241424698bb4"
     },
     {
       "path": "public/index.html",
-      "action": "REPLACE",
-      "base_sha256": "1361baab8892ed92bb8c8a47f32371d3d86415a5381ba60a10154c4a25d653cf",
-      "sha256": "fe8e6cbf815fb1227002d6bbbf4a9c61a8545c9a1e937b40059e4bdb31db2573"
+      "bytes": 2578,
+      "sha256": "167ffc5215d825ddf43904fc326289a12f65106323d8307c74994e719530f1f8"
+    },
+    {
+      "path": "public/intelligence.js",
+      "bytes": 35859,
+      "sha256": "7f7f9c254df90482e29d5153f8658d2abc89dbc818d5ab347e3a5ae7adb808d1"
+    },
+    {
+      "path": "public/map-config.js",
+      "bytes": 427,
+      "sha256": "14fe16bba44e91292521a135e24467abe189b05d9b311236e44f757db77d9acd"
+    },
+    {
+      "path": "public/material-review.js",
+      "bytes": 39922,
+      "sha256": "b14ed670d1438309550f610a226e2121794065bc99188320e25e0b355d287065"
+    },
+    {
+      "path": "public/vendor/leaflet/LICENSE",
+      "bytes": 1395,
+      "sha256": "53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb"
+    },
+    {
+      "path": "public/vendor/leaflet/images/layers-2x.png",
+      "bytes": 1259,
+      "sha256": "066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf"
+    },
+    {
+      "path": "public/vendor/leaflet/images/layers.png",
+      "bytes": 696,
+      "sha256": "1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6"
+    },
+    {
+      "path": "public/vendor/leaflet/images/marker-icon-2x.png",
+      "bytes": 2464,
+      "sha256": "00179c4c1ee830d3a108412ae0d294f55776cfeb085c60129a39aa6fc4ae2528"
+    },
+    {
+      "path": "public/vendor/leaflet/images/marker-icon.png",
+      "bytes": 1466,
+      "sha256": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437"
+    },
+    {
+      "path": "public/vendor/leaflet/images/marker-shadow.png",
+      "bytes": 618,
+      "sha256": "264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da"
+    },
+    {
+      "path": "public/vendor/leaflet/leaflet.css",
+      "bytes": 14806,
+      "sha256": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6"
+    },
+    {
+      "path": "public/vendor/leaflet/leaflet.js",
+      "bytes": 147552,
+      "sha256": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a"
+    },
+    {
+      "path": "public/vendor/pdf-lib.LICENSE.md",
+      "bytes": 1070,
+      "sha256": "f2c9fc00fdb66eb99ac156ba52d734af66d8d309f65753ae809ad34ee2883bcb"
+    },
+    {
+      "path": "public/vendor/pdf-lib.min.js",
+      "bytes": 525099,
+      "sha256": "0f9a5cad07941f0826586c94e089d89b918c46e5c17cf2d5a3c6f666e3bc694f"
+    },
+    {
+      "path": "netlify.toml",
+      "bytes": 837,
+      "sha256": "d1bae5b23b96665b34358fa7c59a2aac94c884104278f63a0ca5ff9941ba1363"
     }
-  ]
+  ],
+  "inherited_v293_package": "KODA_EUDR_V2.9.3_CONFIRM_AND_SPLIT_PDF_UPDATE.zip",
+  "inherited_v293_files": [
+    "apps_script/ClassificationService.gs",
+    "apps_script/DossierService.gs",
+    "public/dossier.js",
+    "public/intelligence.js",
+    "public/material-review.js",
+    "public/i18n.js",
+    "public/index.html",
+    "public/vendor/pdf-lib.min.js",
+    "public/vendor/pdf-lib.LICENSE.md"
+  ],
+  "support_files": [
+    "HUONG_DAN_CAP_NHAT_VI.md",
+    "KIEM_THU_VA_GIOI_HAN.json"
+  ],
+  "validation_summary": "296/296 Node tests passed; 3/3 synthetic browser scenarios passed; source/vendor syntax and direct v2.9.1 delta overlay passed."
 }
