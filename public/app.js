@@ -1,17 +1,634 @@
-let state,view='Dashboard',selected='',material='',selectedChainNode='',selectedSource='',workspaceTab='evidence',busy=false,month=new Date(),calendarMode='Month',documentUrl='',pdfPreviewAbort=null,pdfPreviewCleanup=null;
+let state,view='Dashboard',selected='',material='',selectedChainNode='',selectedSource='',workspaceTab='evidence',workspaceStep='order',busy=false,month=new Date(),calendarMode='Month',documentUrl='',pdfPreviewAbort=null,pdfPreviewCleanup=null,dashboardKpiFilter='',myTasksFilter='';
 const i18n=window.EudrI18n,tt=(s,v)=>i18n.t(s,v);
 let firebaseConfig,verificationPending=false,verificationEmail='';
 async function authConfig(){if(!firebaseConfig){const response=await fetch('/api/auth');firebaseConfig=await response.json();}return firebaseConfig;}
 async function firebaseRequest(path,body){const config=await authConfig();if(!config.enabled)throw Error('CONFIG_REQUIRED');const response=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:'+path+'?key='+encodeURIComponent(config.apiKey),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error('AUTH_FAILED');return data;}
 async function authToken(forceRefresh=false){let token=sessionStorage.getItem('eudr_id_token');if(!token)return '';if(!forceRefresh&&Number(sessionStorage.getItem('eudr_token_expires')||0)>Date.now()+60000)return token;const refresh=sessionStorage.getItem('eudr_refresh_token');if(!refresh)return '';const config=await authConfig();const response=await fetch('https://securetoken.googleapis.com/v1/token?key='+encodeURIComponent(config.apiKey),{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:refresh})});if(!response.ok){clearAuth();return '';}const data=await response.json();saveAuth({idToken:data.id_token,refreshToken:data.refresh_token,expiresIn:data.expires_in});return data.id_token;}
 function saveAuth(data){sessionStorage.setItem('eudr_id_token',data.idToken);sessionStorage.setItem('eudr_refresh_token',data.refreshToken);sessionStorage.setItem('eudr_token_expires',String(Date.now()+Number(data.expiresIn||3600)*1000));}
-function clearAuth(){['eudr_id_token','eudr_refresh_token','eudr_token_expires','eudr_token'].forEach(k=>sessionStorage.removeItem(k));if(typeof DOCUMENT_BYTE_CACHE!=='undefined')DOCUMENT_BYTE_CACHE.clear();verificationPending=false;verificationEmail='';}
+function clearAuth(){['eudr_id_token','eudr_refresh_token','eudr_token_expires','eudr_token','eudr_nav_state'].forEach(k=>sessionStorage.removeItem(k));if(typeof DOCUMENT_BYTE_CACHE!=='undefined')DOCUMENT_BYTE_CACHE.clear();window.EudrGeo?.clearSavedViews?.();window.EudrNav?.reset?.(true);window.EudrOps?.reset?.();verificationPending=false;verificationEmail='';}
 async function authAction(input){const response=await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+await authToken()},body:JSON.stringify(input)});const data=await response.json();if(!data.ok){const error=Error(data.code||'AUTH_FAILED');error.code=data.code;error.status=response.status;error.requestId=data.requestId;throw error;}return data;}
 function errorLabel(error){const code=error?.code||error?.message||'AUTH_FAILED',label=tt(code);return error?.requestId?label+' ['+code+'; '+error.requestId+']':label;}
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roles=(...rs)=>rs.includes(state?.user.role),cap=c=>(state?.user.capabilities||[]).includes(c),manage=()=>cap('ORDER_EDIT'),review=()=>cap('EVIDENCE_REVIEW'),supplier=()=>roles('SUPPLIER_USER'),write=()=>!roles('VIEWER');
 const today=()=>{const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(k=>p.find(x=>x.type===k).value).join('-');};
 const retryKeys=new Map(),filter={q:'',status:'',supplier:'',owner:'',material:'',block:'',geo:'',due:'',from:'',to:''};
+
+/* P2-D: Centralized Operation & Loading Status Manager */
+const EudrOps=(()=>{
+ const STATES={IDLE:'IDLE',QUEUED:'QUEUED',RUNNING:'RUNNING',SUCCEEDED:'SUCCEEDED',FAILED:'FAILED',OUTCOME_UNKNOWN:'OUTCOME_UNKNOWN',CANCELLED:'CANCELLED'};
+ const ops=new Map();
+ let seq=0,panelOpen=false;
+ function validProgress(progress,unitLabel){
+  return typeof progress==='number'&&Number.isFinite(progress)&&progress>=0&&progress<=100&&Boolean(unitLabel)?Math.round(progress):null;
+ }
+ function syncBusy(){
+  const blocking=[...ops.values()].some(o=>o.status===STATES.RUNNING&&o.level>=3);
+  busy=blocking;
+  renderStatusUI();
+ }
+ function start({id='',action='operation',label='Working…',level=1,status=STATES.RUNNING,progress=null,unitLabel='',caseId='',step=''}={}){
+  const opId=id||`op_${++seq}_${Date.now()}`;
+  const entry={id:opId,action,label,level,status:STATES[status]||STATES.RUNNING,progress:validProgress(progress,unitLabel),unitLabel:unitLabel||'',caseId:caseId||selected||'',step:step||'',startedAt:Date.now(),updatedAt:Date.now(),error:'',requestId:''};
+  ops.set(opId,entry);
+  if(ops.size>40){const first=ops.keys().next().value;if(first!==opId)ops.delete(first);}
+  syncBusy();
+  return opId;
+ }
+ function update(id,patch={}){
+  const entry=ops.get(id);if(!entry)return null;
+  if(patch.label!==undefined)entry.label=patch.label;
+  if(patch.step!==undefined)entry.step=patch.step;
+  if(patch.status&&STATES[patch.status])entry.status=STATES[patch.status];
+  if(patch.unitLabel!==undefined)entry.unitLabel=patch.unitLabel;
+  if(patch.progress!==undefined)entry.progress=validProgress(patch.progress,entry.unitLabel);
+  if(patch.error!==undefined)entry.error=patch.error;
+  if(patch.requestId!==undefined)entry.requestId=patch.requestId;
+  entry.updatedAt=Date.now();
+  syncBusy();
+  return entry;
+ }
+ function succeed(id,summary=''){
+  const entry=ops.get(id);if(!entry)return null;
+  entry.status=STATES.SUCCEEDED;
+  if(summary)entry.step=summary;
+  if(entry.progress!==null&&entry.unitLabel)entry.progress=100;
+  entry.updatedAt=Date.now();
+  syncBusy();
+  return entry;
+ }
+ function fail(id,error,{uncertain=false}={}){
+  const entry=ops.get(id);if(!entry)return null;
+  const isUncertain=uncertain||Number(error?.status)>=500||['UPSTREAM_TIMEOUT','NETWORK_ERROR'].includes(error?.code);
+  entry.status=isUncertain?STATES.OUTCOME_UNKNOWN:STATES.FAILED;
+  entry.error=typeof error==='string'?error:errorLabel(error);
+  entry.requestId=error?.requestId||'';
+  entry.updatedAt=Date.now();
+  syncBusy();
+  return entry;
+ }
+ function cancel(id,reason=''){
+  const entry=ops.get(id);if(!entry)return null;
+  entry.status=STATES.CANCELLED;
+  if(reason)entry.step=reason;
+  entry.updatedAt=Date.now();
+  syncBusy();
+  return entry;
+ }
+ function lockButton(btn,loadingLabel=''){
+  if(!btn)return ()=>{};
+  const prevDisabled=btn.disabled,prevText=btn.textContent;
+  btn.disabled=true;
+  btn.setAttribute('aria-busy','true');
+  if(btn.classList)btn.classList.add('is-loading');
+  if(loadingLabel)btn.textContent=tt(loadingLabel);
+  return ()=>{
+   if(!btn.isConnected)return;
+   btn.disabled=prevDisabled;
+   btn.removeAttribute('aria-busy');
+   if(btn.classList)btn.classList.remove('is-loading');
+   if(loadingLabel)btn.textContent=prevText;
+  };
+ }
+ function skeleton(label='Loading…',rows=3){
+  const count=Math.max(1,Math.min(8,Number(rows)||3));
+  return `<div class="p2-skeleton" role="status" aria-busy="true" aria-label="${esc(tt(label))}"><span class="sr-only">${esc(tt(label))}</span>${'<div class="p2-skeleton-line"></div>'.repeat(count)}</div>`;
+ }
+ function renderStatusUI(){
+  const list=[...ops.values()].sort((a,b)=>b.updatedAt-a.updatedAt);
+  const running=list.filter(o=>o.status===STATES.RUNNING||o.status===STATES.QUEUED);
+  const uncertain=list.filter(o=>o.status===STATES.OUTCOME_UNKNOWN);
+  const failed=list.filter(o=>o.status===STATES.FAILED);
+  const btn=$('opsStatusBtn'),dot=$('opsStatusDot'),lbl=$('opsStatusLabel'),banner=$('operationBanner'),panel=$('operationCenterPanel');
+  if(btn&&lbl){
+   const tone=uncertain.length?'uncertain':running.length?'running':failed.length?'failed':'ready';
+   if(btn.dataset)btn.dataset.opsTone=tone;
+   if(dot?.dataset)dot.dataset.opsTone=tone;
+   lbl.textContent=running.length?`${running.length} ${tt('running')}`:uncertain.length?`${uncertain.length} ${tt('Verify status')}`:failed.length?`${failed.length} ${tt('Failed')}`:tt('Operations ready');
+  }
+  if(banner){
+   const activeBlocking=running.find(o=>o.level>=3);
+   const latestUncertain=uncertain[0];
+   if(activeBlocking){
+    const elapsedSec=Math.floor((Date.now()-activeBlocking.startedAt)/1000);
+    const slowHint=elapsedSec>=8?` · ${tt('Still working — waiting for Google Drive / Sheets…')}`:'';
+    const progMarkup=activeBlocking.progress!==null?`<progress value="${activeBlocking.progress}" max="100">${activeBlocking.progress}%</progress> <span>${activeBlocking.progress}% (${esc(activeBlocking.unitLabel)})</span>`:'<span class="spinner spinner--inline" aria-hidden="true"></span>';
+    banner.hidden=false;
+    banner.className='operation-banner operation-banner--running';
+    banner.setAttribute('role','status');
+    banner.innerHTML=`<div class="operation-banner-inner">${progMarkup}<div><strong>${esc(tt(activeBlocking.label))}</strong>${activeBlocking.step?` · <span>${esc(tt(activeBlocking.step))}</span>`:''}${esc(slowHint)}</div></div>`;
+   }else if(latestUncertain){
+    banner.hidden=false;
+    banner.className='operation-banner operation-banner--uncertain';
+    banner.setAttribute('role','alert');
+    banner.innerHTML=`<div class="operation-banner-inner"><strong>${esc(tt('OUTCOME UNKNOWN'))}: ${esc(tt(latestUncertain.label))}</strong><span>${esc(latestUncertain.error||tt('Save status is uncertain. Check the latest record before retrying; this form remains open.'))}</span><button type="button" class="quiet-button" id="dismissUncertainBanner">${esc(tt('Dismiss'))}</button></div>`;
+    const dismiss=$('dismissUncertainBanner');if(dismiss)dismiss.onclick=()=>{ops.delete(latestUncertain.id);syncBusy();};
+   }else{
+    banner.hidden=true;banner.innerHTML='';
+   }
+  }
+  if(panel&&!panel.hidden){
+   panel.innerHTML=`<div class="ops-center-head"><h3>${esc(tt('Operation Status Center'))}</h3><div class="row"><button type="button" class="quiet-button" id="opsClearDone">${esc(tt('Clear finished'))}</button><button type="button" class="quiet-button" id="opsClosePanel">${esc(tt('Close'))}</button></div></div>`+(list.length?`<ul class="ops-center-list">${list.map(o=>`<li class="ops-item ops-item--${esc(o.status.toLowerCase())}" data-op-id="${esc(o.id)}" data-op-status="${esc(o.status)}"><div class="ops-item-main"><strong>${esc(tt(o.label))}</strong> <span class="status-pill">${esc(tt(o.status))}</span>${o.step?`<small>${esc(tt(o.step))}</small>`:''}${o.error?`<small class="ops-item-error" role="alert">${esc(o.error)}</small>`:''}</div>${o.progress!==null?`<div class="ops-item-progress"><progress value="${o.progress}" max="100">${o.progress}%</progress><small>${o.progress}% · ${esc(o.unitLabel)}</small></div>`:o.status===STATES.RUNNING?'<span class="spinner spinner--inline" aria-hidden="true"></span>':''}</li>`).join('')}</ul>`:`<p class="muted">${esc(tt('No recent background or write operations in this session.'))}</p>`);
+   const clr=$('opsClearDone');if(clr)clr.onclick=()=>{clearCompleted();};
+   const cls=$('opsClosePanel');if(cls)cls.onclick=()=>togglePanel(false);
+  }
+ }
+ function togglePanel(force){
+  panelOpen=typeof force==='boolean'?force:!panelOpen;
+  const panel=$('operationCenterPanel'),btn=$('opsStatusBtn');
+  if(panel)panel.hidden=!panelOpen;
+  if(btn)btn.setAttribute('aria-expanded',String(panelOpen));
+  renderStatusUI();
+ }
+ function clearCompleted(){
+  for(const [k,v] of ops.entries())if([STATES.SUCCEEDED,STATES.CANCELLED].includes(v.status))ops.delete(k);
+  syncBusy();
+ }
+ function reset(){ops.clear();panelOpen=false;busy=false;const p=$('operationCenterPanel');if(p)p.hidden=true;renderStatusUI();}
+ return {STATES,start,update,succeed,fail,cancel,lockButton,skeleton,togglePanel,clearCompleted,reset,get:id=>ops.get(id)||null,list:()=>[...ops.values()],active:()=>[...ops.values()].filter(o=>o.status===STATES.RUNNING||o.status===STATES.QUEUED)};
+})();
+window.EudrOps=EudrOps;
+
+/* P2-A: Context-Aware Navigation & Workspace State Manager */
+const EudrNav=(()=>{
+ const STORAGE_KEY='eudr_nav_state',MAX_HISTORY=50;
+ const navHistory=[],navForward=[],viewerStack=[],orderContexts=new Map(),recentOrders=[];
+ let formDirty=false,suppressPush=false,returnContext=null,restoringViewer=false;
+
+ function captureState(overrides={}){
+  const topViewer=viewerStack.at(-1)||null;
+  return {
+   view:view||'Dashboard',
+   caseId:selected||'',
+   productId:selectedProduct||'',
+   materialId:material||'',
+   sourceId:selectedSource||'',
+   chainNodeId:selectedChainNode||'',
+   workspaceTab:workspaceTab||'evidence',
+   workspaceStep:workspaceStep||'order',
+   viewer:topViewer?.type||'',
+   documentId:topViewer?.type==='document'?topViewer.id:'',
+   geoId:topViewer?.type==='geo'?topViewer.id:topViewer?.type==='reviewGeo'?topViewer.id:'',
+   viewerPage:topViewer?.page||1,
+   dashboardKpiFilter:dashboardKpiFilter||'',
+   myTasksFilter:myTasksFilter||'',
+   filterSnapshot:{...filter},
+   scrollY:typeof window!=='undefined'?Number(window.scrollY||0):0,
+   returnContext:returnContext?{...returnContext}:null,
+   ...overrides
+  };
+ }
+ function isSameState(a,b){
+  if(!a||!b)return false;
+  return a.view===b.view&&a.caseId===b.caseId&&a.productId===b.productId&&a.materialId===b.materialId&&a.sourceId===b.sourceId&&a.chainNodeId===b.chainNodeId&&a.workspaceTab===b.workspaceTab&&a.workspaceStep===b.workspaceStep&&a.viewer===b.viewer&&a.documentId===b.documentId&&a.geoId===b.geoId&&a.dashboardKpiFilter===b.dashboardKpiFilter&&a.myTasksFilter===b.myTasksFilter;
+ }
+ function saveOrderContext(caseId=selected){
+  if(!caseId)return;
+  orderContexts.set(caseId,{
+   caseId,
+   productId:selectedProduct||'',
+   materialId:material||'',
+   sourceId:selectedSource||'',
+   chainNodeId:selectedChainNode||'',
+   workspaceTab:workspaceTab||'evidence',
+   workspaceStep:workspaceStep||'order'
+  });
+  const idx=recentOrders.indexOf(caseId);
+  if(idx>=0)recentOrders.splice(idx,1);
+  recentOrders.unshift(caseId);
+  if(recentOrders.length>5)recentOrders.length=5;
+ }
+ function persist(){
+  if(!sessionStorage.getItem('eudr_id_token')&&!state)return;
+  try{
+   const snap=captureState();
+   const payload={
+    current:{view:snap.view,caseId:snap.caseId,productId:snap.productId,materialId:snap.materialId,sourceId:snap.sourceId,chainNodeId:snap.chainNodeId,workspaceTab:snap.workspaceTab,workspaceStep:snap.workspaceStep,dashboardKpiFilter:snap.dashboardKpiFilter,myTasksFilter:snap.myTasksFilter,filterSnapshot:snap.filterSnapshot},
+    recentOrders:[...recentOrders],
+    orderContexts:[...orderContexts.entries()].slice(0,10)
+   };
+   sessionStorage.setItem(STORAGE_KEY,JSON.stringify(payload));
+  }catch{}
+ }
+ function markDirty(dirty=true){formDirty=Boolean(dirty);}
+ function isDirty(){return formDirty;}
+ function canNavigateAway(){
+  if(!formDirty)return true;
+  if(typeof window!=='undefined'&&typeof window.confirm==='function'){
+   const ok=window.confirm(tt('You have unsaved changes. Leave this view and discard changes?'));
+   if(!ok)return false;
+  }
+  formDirty=false;
+  return true;
+ }
+ function recordStep(snapshot=captureState()){
+  if(suppressPush)return;
+  const top=navHistory.at(-1);
+  if(top&&isSameState(top,snapshot)){navHistory[navHistory.length-1]=snapshot;return;}
+  navHistory.push(snapshot);
+  if(navHistory.length>MAX_HISTORY)navHistory.shift();
+  navForward.length=0;
+ }
+ function pushWorkspaceStep(nextStep,applyFn){
+  const before=captureState();
+  recordStep(before);
+  applyFn?.();
+  workspaceStep=nextStep;
+  saveOrderContext(selected);
+  persist();
+ }
+ async function restoreViewerState(snap){
+  if(!snap?.viewer){
+   viewerStack.length=0;
+   if($('drawer')?.open)closeDrawer({fromHistory:true});
+   updateNavChrome();
+   return;
+  }
+  restoringViewer=true;
+  try{
+   if(snap.viewer==='geo'&&snap.geoId){
+    viewerStack.length=0;
+    viewerStack.push({type:'geo',id:snap.geoId,title:(state?.materials?.find(m=>m.id===snap.geoId)?.material||'')+' · '+tt('Plot map'),caseId:snap.caseId,productId:snap.productId,materialId:snap.materialId,sourceId:snap.sourceId,chainNodeId:snap.chainNodeId});
+    await geoDialog(snap.geoId,{fromHistory:true});
+   }else if(snap.viewer==='document'&&snap.documentId){
+    await documentView(snap.documentId,snap.viewerPage||1,{fromHistory:true});
+   }else if(snap.viewer==='reviewGeo'&&snap.geoId){
+    reviewGeoDialog(snap.geoId,{fromHistory:true});
+   }
+  }finally{restoringViewer=false;updateNavChrome();}
+ }
+ async function applySnapshot(snap,{fromHistory=false}={}){
+  if(!snap)return false;
+  suppressPush=true;
+  try{
+   view=snap.view||'Dashboard';
+   selected=snap.caseId||'';
+   selectedProduct=snap.productId||'';
+   material=snap.materialId||'';
+   selectedSource=snap.sourceId||'';
+   selectedChainNode=snap.chainNodeId||'';
+   workspaceTab=snap.workspaceTab||'evidence';
+   workspaceStep=snap.workspaceStep||'order';
+   dashboardKpiFilter=snap.dashboardKpiFilter||'';
+   myTasksFilter=snap.myTasksFilter||'';
+   returnContext=snap.returnContext||null;
+   if(snap.filterSnapshot)Object.keys(filter).forEach(k=>{filter[k]=snap.filterSnapshot[k]||'';});
+   if(selected)saveOrderContext(selected);
+   render();
+   await restoreViewerState(snap);
+   if(typeof window!=='undefined'&&typeof window.scrollTo==='function'&&Number.isFinite(snap.scrollY)){
+    try{window.scrollTo(0,snap.scrollY);}catch{}
+   }
+   persist();
+  }finally{suppressPush=false;}
+  return true;
+ }
+ function navigate(target={},options={}){
+  if(!options.skipDirtyCheck&&!canNavigateAway())return false;
+  const current=captureState();
+  const nextView=target.view||view;
+  const nextCaseId=target.caseId!==undefined?target.caseId:(nextView==='Workspace'?selected:selected);
+  let savedCtx=nextView==='Workspace'&&nextCaseId?orderContexts.get(nextCaseId):null;
+  const nextSnap={
+   ...current,
+   view:nextView,
+   caseId:nextCaseId||'',
+   productId:target.productId!==undefined?target.productId:(savedCtx?.productId||''),
+   materialId:target.materialId!==undefined?target.materialId:(savedCtx?.materialId||''),
+   sourceId:target.sourceId!==undefined?target.sourceId:(savedCtx?.sourceId||''),
+   chainNodeId:target.chainNodeId!==undefined?target.chainNodeId:(savedCtx?.chainNodeId||''),
+   workspaceTab:target.workspaceTab!==undefined?target.workspaceTab:(savedCtx?.workspaceTab||'evidence'),
+   workspaceStep:target.workspaceStep!==undefined?target.workspaceStep:(savedCtx?.workspaceStep||'order'),
+   viewer:target.viewer!==undefined?target.viewer:'',
+   documentId:target.documentId||'',
+   geoId:target.geoId||'',
+   viewerPage:target.viewerPage||1,
+   dashboardKpiFilter:target.dashboardKpiFilter!==undefined?target.dashboardKpiFilter:'',
+   myTasksFilter:target.myTasksFilter!==undefined?target.myTasksFilter:'',
+   returnContext:target.returnContext!==undefined?target.returnContext:returnContext
+  };
+  if(!options.replace&&!isSameState(current,nextSnap))recordStep(current);
+  viewerStack.length=0;
+  if($('drawer')?.open&&!nextSnap.viewer)closeDrawer({fromHistory:true});
+  view=nextSnap.view;
+  selected=nextSnap.caseId;
+  selectedProduct=nextSnap.productId;
+  material=nextSnap.materialId;
+  selectedSource=nextSnap.sourceId;
+  selectedChainNode=nextSnap.chainNodeId;
+  workspaceTab=nextSnap.workspaceTab;
+  workspaceStep=nextSnap.workspaceStep;
+  dashboardKpiFilter=nextSnap.dashboardKpiFilter;
+  myTasksFilter=nextSnap.myTasksFilter;
+  returnContext=nextSnap.returnContext;
+  if(target.filterSnapshot)Object.keys(filter).forEach(k=>{filter[k]=target.filterSnapshot[k]||'';});
+  if(view==='Workspace'&&selected)saveOrderContext(selected);
+  persist();
+  render();
+  return true;
+ }
+ function openViewer(type,id,meta={}){
+  if(restoringViewer)return;
+  const current=captureState();
+  const nextViewer={type,id:id||'',page:meta.page||1,title:meta.title||type,caseId:selected,productId:selectedProduct,materialId:material,sourceId:selectedSource,chainNodeId:selectedChainNode};
+  const top=viewerStack.at(-1);
+  if(!top||top.type!==type||top.id!==id){
+   recordStep(current);
+   viewerStack.push(nextViewer);
+  }else{
+   viewerStack[viewerStack.length-1]={...top,...nextViewer};
+  }
+  persist();
+  updateNavChrome();
+ }
+ function updateViewerPage(docId,page){
+  const top=viewerStack.at(-1);
+  if(top&&top.type==='document'&&top.id===docId)top.page=page;
+ }
+ async function closeViewer({fromCloseButton=false}={}){
+  if(fromCloseButton&&!canNavigateAway())return false;
+  formDirty=false;
+  if(fromCloseButton&&viewerStack.length>1){
+   const closed=viewerStack.pop();
+   while(navHistory.length&&navHistory.at(-1).viewer===closed.type&&(navHistory.at(-1).documentId===closed.id||navHistory.at(-1).geoId===closed.id)){
+    navHistory.pop();
+   }
+   const parent=viewerStack.at(-1);
+   if(parent){
+    if(navHistory.length&&navHistory.at(-1).viewer===parent.type)navHistory.pop();
+    await restoreViewerState({
+     ...captureState(),
+     viewer:parent.type,
+     documentId:parent.type==='document'?parent.id:'',
+     geoId:parent.type==='geo'||parent.type==='reviewGeo'?parent.id:'',
+     viewerPage:parent.page||1
+    });
+    return true;
+   }
+  }
+  viewerStack.length=0;
+  while(navHistory.length&&navHistory.at(-1).viewer){
+   navHistory.pop();
+  }
+  closeDrawer({fromHistory:true});
+  updateNavChrome();
+  return true;
+ }
+ async function back(){
+  if(!canNavigateAway())return false;
+  if(!navHistory.length)return false;
+  const current=captureState();
+  const prev=navHistory.pop();
+  navForward.push(current);
+  if(prev.viewer){
+   const idx=viewerStack.findIndex(v=>v.type===prev.viewer&&v.id===(prev.documentId||prev.geoId));
+   if(idx>=0)viewerStack.length=idx+1;
+   else viewerStack.push({type:prev.viewer,id:prev.documentId||prev.geoId,page:prev.viewerPage||1,caseId:prev.caseId,productId:prev.productId,materialId:prev.materialId,sourceId:prev.sourceId,chainNodeId:prev.chainNodeId});
+  }else{
+   viewerStack.length=0;
+  }
+  await applySnapshot(prev,{fromHistory:true});
+  return true;
+ }
+ async function forward(){
+  if(!canNavigateAway())return false;
+  if(!navForward.length)return false;
+  const current=captureState();
+  const next=navForward.pop();
+  navHistory.push(current);
+  if(next.viewer){
+   viewerStack.push({type:next.viewer,id:next.documentId||next.geoId,page:next.viewerPage||1,caseId:next.caseId,productId:next.productId,materialId:next.materialId,sourceId:next.sourceId,chainNodeId:next.chainNodeId});
+  }else{
+   viewerStack.length=0;
+  }
+  await applySnapshot(next,{fromHistory:true});
+  return true;
+ }
+ function backToOrder(orderId=''){
+  const targetId=orderId||selected||recentOrders.find(id=>state?.cases?.some(c=>c.id===id))||'';
+  if(!targetId||!state?.cases?.some(c=>c.id===targetId))return false;
+  const saved=orderContexts.get(targetId)||{};
+  return navigate({
+   view:'Workspace',
+   caseId:targetId,
+   productId:saved.productId||selectedProduct||'',
+   materialId:saved.materialId||material||'',
+   sourceId:saved.sourceId||selectedSource||'',
+   chainNodeId:saved.chainNodeId||selectedChainNode||'',
+   workspaceTab:saved.workspaceTab||workspaceTab||'evidence',
+   workspaceStep:saved.workspaceStep||workspaceStep||'order',
+   viewer:''
+  });
+ }
+ function openKpiTarget(kpiKey){
+  if(kpiKey==='ACTIVE_ORDERS'){
+   return navigate({view:'Orders',dashboardKpiFilter:'ACTIVE_ORDERS',returnContext:{view:'Dashboard',kpi:kpiKey}});
+  }
+  return navigate({view:'My Tasks',myTasksFilter:kpiKey,returnContext:{view:'Dashboard',kpi:kpiKey}});
+ }
+ function breadcrumbs(){
+  if(!state)return [];
+  const items=[];
+  if(view==='Workspace'){
+   const c=state.cases?.find(x=>x.id===selected);
+   items.push({label:tt('Orders'),view:'Orders',action:()=>navigate({view:'Orders',viewer:''})});
+   if(c){
+    items.push({label:c.so,view:'Workspace',caseId:c.id,step:'order',action:()=>navigate({view:'Workspace',caseId:c.id,productId:selectedProduct,materialId:material,sourceId:selectedSource,chainNodeId:'',workspaceStep:'order',viewer:''})});
+    const prod=(state.products||[]).find(p=>p.id===selectedProduct&&p.case_id===c.id);
+    if(prod&&['product','material','source','chain'].includes(workspaceStep)){
+     items.push({label:prod.product_name,step:'product',action:()=>navigate({view:'Workspace',caseId:c.id,productId:prod.id,materialId:material,sourceId:selectedSource,chainNodeId:'',workspaceStep:'product',viewer:''})});
+    }
+    const mat=(state.materials||[]).find(m=>m.id===material&&m.case_id===c.id);
+    if(mat&&(workspaceStep==='material'||workspaceStep==='source'||workspaceStep==='chain'||viewerStack.length>0||Boolean(material))){
+     items.push({label:mat.material,step:'material',action:()=>navigate({view:'Workspace',caseId:c.id,productId:selectedProduct,materialId:mat.id,sourceId:selectedSource,chainNodeId:'',workspaceStep:'material',viewer:''})});
+    }
+    const src=(state.trace?.sources||[]).find(s=>s.id===selectedSource&&s.material_id===material);
+    if(src&&(workspaceStep==='source'||workspaceStep==='chain'||viewerStack.length>0||Boolean(selectedSource))){
+     items.push({label:src.supplier_po||src.lot_no||tt('Selected source'),step:'source',action:()=>navigate({view:'Workspace',caseId:c.id,productId:selectedProduct,materialId:material,sourceId:src.id,chainNodeId:'',workspaceStep:'source',viewer:''})});
+    }
+    const node=(state.chain||[]).find(n=>n.id===selectedChainNode&&n.material_id===material);
+    if(node){
+     items.push({label:node.display_name||node.id,step:'chain',action:()=>navigate({view:'Workspace',caseId:c.id,productId:selectedProduct,materialId:material,sourceId:selectedSource,chainNodeId:node.id,workspaceStep:'chain',viewer:''})});
+    }
+   }
+  }else{
+   if(returnContext?.view==='Dashboard'&&(dashboardKpiFilter||myTasksFilter)){
+    items.push({label:tt('Dashboard'),view:'Dashboard',action:()=>navigate({view:'Dashboard',dashboardKpiFilter:'',myTasksFilter:''})});
+   }
+   items.push({label:tt(view),view,action:()=>navigate({view,viewer:''})});
+  }
+  viewerStack.forEach((v,idx)=>{
+   const label=v.type==='geo'?tt('GeoJSON Map'):v.type==='document'?(state?.docs?.find(d=>d.id===v.id)?.name||tt('Document preview')):v.title||v.type;
+   items.push({
+    label,
+    viewer:v.type,
+    viewerId:v.id,
+    action:async()=>{
+     if(idx===viewerStack.length-1)return;
+     viewerStack.length=idx+1;
+     await restoreViewerState({
+      ...captureState(),
+      viewer:v.type,
+      documentId:v.type==='document'?v.id:'',
+      geoId:v.type==='geo'||v.type==='reviewGeo'?v.id:'',
+      viewerPage:v.page||1
+     });
+    }
+   });
+  });
+  return items;
+ }
+ function updateNavChrome(){
+  const backBtn=$('navBackBtn'),fwdBtn=$('navForwardBtn'),backOrderBtn=$('backToOrderBtn'),bar=$('breadcrumbBar'),drawerBar=$('drawerNavBar'),sideCtx=$('sidebarOrderContext');
+  if(backBtn){
+   backBtn.disabled=navHistory.length===0;
+   backBtn.onclick=()=>back();
+  }
+  if(fwdBtn){
+   fwdBtn.disabled=navForward.length===0;
+   fwdBtn.onclick=()=>forward();
+  }
+  const activeOrderId=(selected&&state?.cases?.some(c=>c.id===selected))?selected:(recentOrders.find(id=>state?.cases?.some(c=>c.id===id))||'');
+  const activeOrder=activeOrderId?state?.cases?.find(c=>c.id===activeOrderId):null;
+  if(backOrderBtn){
+   if(activeOrder&&(view!=='Workspace'||viewerStack.length>0)){
+    backOrderBtn.hidden=false;
+    backOrderBtn.textContent=`← ${tt('Back to')} ${activeOrder.so}`;
+    backOrderBtn.onclick=()=>backToOrder(activeOrder.id);
+   }else{
+    backOrderBtn.hidden=true;
+   }
+  }
+  if(sideCtx){
+   if(state&&activeOrder){
+    const saved=orderContexts.get(activeOrder.id)||{};
+    const matName=state.materials?.find(m=>m.id===(saved.materialId||material)&&m.case_id===activeOrder.id)?.material||'';
+    sideCtx.hidden=false;
+    sideCtx.innerHTML=`<div class="sidebar-active-card"><span class="sidebar-active-eyebrow">${esc(tt('Active order context'))}</span><strong class="sidebar-active-so">${esc(activeOrder.so)}</strong>${matName?`<small class="sidebar-active-sub">${esc(matName)}</small>`:''}<button type="button" id="sidebarQuickReturnBtn" class="sidebar-quick-return" data-nav-recent-order="${esc(activeOrder.id)}">${esc(tt(view==='Workspace'&&selected===activeOrder.id&&!viewerStack.length?'Active in workspace':'Return to order →'))}</button></div>`;
+    const qBtn=$('sidebarQuickReturnBtn');if(qBtn)qBtn.onclick=()=>backToOrder(activeOrder.id);
+   }else{
+    sideCtx.hidden=true;sideCtx.innerHTML='';
+   }
+  }
+  if(bar){
+   if(!state){bar.innerHTML='';}
+   else{
+    const crumbs=breadcrumbs();
+    bar.innerHTML=crumbs.map((c,i)=>`${i>0?'<span class="breadcrumb-sep" aria-hidden="true">/</span>':''}<button type="button" class="breadcrumb-item${i===crumbs.length-1?' is-current':''}" data-breadcrumb-index="${i}" ${i===crumbs.length-1?'aria-current="location"':''}>${esc(c.label)}</button>`).join('');
+    bar.querySelectorAll('[data-breadcrumb-index]').forEach(b=>{
+     b.onclick=()=>{const idx=Number(b.dataset.breadcrumbIndex);crumbs[idx]?.action?.();};
+    });
+   }
+  }
+  if(drawerBar){
+   if(viewerStack.length>1){
+    const prev=viewerStack[viewerStack.length-2];
+    const prevLabel=prev.type==='geo'?tt('GeoJSON Map'):prev.title||tt('Previous view');
+    drawerBar.innerHTML=`<button type="button" id="drawerBackBtn" class="quiet-button drawer-back-btn">← ${esc(tt('Back to'))} ${esc(prevLabel)}</button>`;
+    const dBack=$('drawerBackBtn');if(dBack)dBack.onclick=()=>back();
+   }else if(viewerStack.length===1&&selected){
+    const c=state?.cases?.find(x=>x.id===selected);
+    const mat=state?.materials?.find(m=>m.id===material&&m.case_id===selected);
+    const originLabel=mat?`${c?.so||''} · ${mat.material}`:(c?.so||tt('Order workspace'));
+    drawerBar.innerHTML=`<button type="button" id="drawerBackBtn" class="quiet-button drawer-back-btn">← ${esc(tt('Back to'))} ${esc(originLabel)}</button>`;
+    const dBack=$('drawerBackBtn');if(dBack)dBack.onclick=()=>back();
+   }else{
+    drawerBar.innerHTML='';
+   }
+  }
+ }
+ function revalidateAndRestore(){
+  if(!state)return {revoked:false};
+  let revoked=false;
+  try{
+   const raw=sessionStorage.getItem(STORAGE_KEY);
+   if(raw){
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed.orderContexts)){
+     for(const [cid,ctx] of parsed.orderContexts){
+      if(state.cases?.some(c=>c.id===cid))orderContexts.set(cid,ctx);
+     }
+    }
+    if(Array.isArray(parsed.recentOrders)){
+     recentOrders.length=0;
+     parsed.recentOrders.filter(cid=>state.cases?.some(c=>c.id===cid)).forEach(cid=>recentOrders.push(cid));
+    }
+    if(parsed.current&&!selected&&view==='Dashboard'){
+     const cur=parsed.current;
+     if(cur.caseId&&!state.cases?.some(c=>c.id===cur.caseId)){
+      revoked=true;
+     }else{
+      if(cur.view)view=cur.view;
+      if(cur.caseId)selected=cur.caseId;
+      if(cur.productId)selectedProduct=cur.productId;
+      if(cur.materialId)material=cur.materialId;
+      if(cur.sourceId)selectedSource=cur.sourceId;
+      if(cur.chainNodeId)selectedChainNode=cur.chainNodeId;
+      if(cur.workspaceTab)workspaceTab=cur.workspaceTab;
+      if(cur.workspaceStep)workspaceStep=cur.workspaceStep;
+     }
+    }
+   }
+  }catch{}
+  const params=new URLSearchParams(String(location.hash||'').slice(1));
+  const hashCase=params.get('case')||params.get('caseId');
+  if(hashCase){
+   if(state.cases?.some(c=>c.id===hashCase)){
+    selected=hashCase;
+    view=params.get('view')||'Workspace';
+    if(params.get('product')||params.get('productId'))selectedProduct=params.get('product')||params.get('productId');
+    if(params.get('material')||params.get('materialId'))material=params.get('material')||params.get('materialId');
+    if(params.get('source')||params.get('sourceId'))selectedSource=params.get('source')||params.get('sourceId');
+    if(params.get('node')||params.get('chainNodeId'))selectedChainNode=params.get('node')||params.get('chainNodeId');
+    if(params.get('tab')||params.get('workspaceTab'))workspaceTab=params.get('tab')||params.get('workspaceTab');
+   }else{
+    revoked=true;
+    selected='';selectedProduct='';material='';selectedSource='';selectedChainNode='';
+    view=supplier()?'My Tasks':'Orders';
+   }
+  }
+  if(selected&&!state.cases?.some(c=>c.id===selected)){
+   revoked=true;
+   selected='';selectedProduct='';material='';selectedSource='';selectedChainNode='';
+   view=supplier()?'My Tasks':'Orders';
+  }
+  if(selected){
+   if(selectedProduct&&!(state.products||[]).some(p=>p.id===selectedProduct&&p.case_id===selected))selectedProduct='';
+   if(material&&!(state.materials||[]).some(m=>m.id===material&&m.case_id===selected&&m.active!=='NO')){material='';selectedSource='';selectedChainNode='';}
+   if(selectedSource&&!(state.trace?.sources||[]).some(s=>s.id===selectedSource&&s.material_id===material))selectedSource='';
+   if(selectedChainNode&&!(state.chain||[]).some(n=>n.id===selectedChainNode&&n.material_id===material))selectedChainNode='';
+   saveOrderContext(selected);
+  }
+  persist();
+  if(revoked){
+   if($('msg'))$('msg').textContent=tt('Access to the previously selected record is no longer available.');
+  }
+  return {revoked};
+ }
+ function reset(clearStorage=false){
+  navHistory.length=0;navForward.length=0;viewerStack.length=0;orderContexts.clear();recentOrders.length=0;
+  formDirty=false;returnContext=null;dashboardKpiFilter='';myTasksFilter='';
+  if(clearStorage)sessionStorage.removeItem(STORAGE_KEY);
+  updateNavChrome();
+ }
+ return {
+  captureState,navigate,pushWorkspaceStep,openViewer,updateViewerPage,closeViewer,
+  back,forward,backToOrder,openKpiTarget,breadcrumbs,updateNavChrome,revalidateAndRestore,
+  restoreFromUrlOrSession:revalidateAndRestore,revalidateAccess:revalidateAndRestore,
+  markDirty,isDirty,canNavigateAway,reset,
+  currentViewer:()=>viewerStack.at(-1)||null,
+  canBack:()=>navHistory.length>0,
+  canForward:()=>navForward.length>0,
+  canGoBack:()=>navHistory.length>0,
+  canGoForward:()=>navForward.length>0,
+  getHistory:()=>[...navHistory],
+  getForward:()=>[...navForward],
+  getViewerStack:()=>[...viewerStack],
+  getOrderContext:id=>orderContexts.get(id)||null,
+  getRecentOrders:()=>[...recentOrders]
+ };
+})();
+window.EudrNav=EudrNav;
+
 async function call(action,...args){const fingerprint=JSON.stringify({action,args}),requestKey=retryKeys.get(fingerprint)||crypto.randomUUID();retryKeys.set(fingerprint,requestKey);
  let response;try{response=await fetch('/api/call',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+await authToken()},body:JSON.stringify({action,args,requestKey})});}catch{const e=Error('Connection failed');e.code='NETWORK_ERROR';e.status=502;throw e;}
  let result;try{result=await response.json();}catch{const e=Error('Invalid server response');e.code='UPSTREAM_FORMAT';e.status=response.status||502;throw e;}
@@ -19,7 +636,7 @@ async function call(action,...args){const fingerprint=JSON.stringify({action,arg
 }
 function signIn(message=''){
  window.EudrWorkspaceChat?.stop?.(); window.EudrIntelligence?.stop?.();
- state=null;verificationPending=false;$('identity').textContent='';$('pageTitle').textContent=tt('Secure access');$('logout').hidden=true;$('nav').replaceChildren();$('msg').textContent=message;
+ state=null;verificationPending=false;$('identity').textContent='';$('pageTitle').textContent=tt('Secure access');$('logout').hidden=true;$('nav').replaceChildren();$('msg').textContent=message;EudrNav.updateNavChrome();
  $('main').innerHTML='<div class="card login"><p class="eyebrow">KODA EUDR WORKSPACE</p><h2>Your evidence workspace</h2><p>Structured evidence for traceable and accountable review</p><form id="loginForm"><label>Username / Email<input id="loginEmail" type="email" autocomplete="username" required></label><label>Password<input id="loginPassword" type="password" autocomplete="current-password" required></label><button>Sign In</button></form><button class="quiet-button" id="forgotPassword" type="button">Forgot Password?</button><small class="muted">Access follows your assigned orders and role.</small></div>';
  $('loginForm').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;$('msg').textContent='';try{const result=await firebaseRequest('signInWithPassword',{email:$('loginEmail').value.trim(),password:$('loginPassword').value,returnSecureToken:true});saveAuth(result);$('loginPassword').value='';const account=await firebaseRequest('lookup',{idToken:await authToken()}),user=account.users?.[0];if(!user||user.localId!==result.localId)throw Error('AUTH_FAILED');if(user.emailVerified!==true){emailVerification(user.email||result.email);return;}await call('recordLogin');await load();}catch(error){if(error.code==='AUTH_EMAIL_UNVERIFIED'){emailVerification();$('msg').textContent=errorLabel(error);}else{clearAuth();$('msg').textContent=errorLabel(error);}}finally{button.disabled=false;}};
  $('forgotPassword').onclick=async()=>{const email=$('loginEmail').value.trim();if(!email){$('loginEmail').focus();return;}try{await firebaseRequest('sendOobCode',{requestType:'PASSWORD_RESET',email});}catch{}$('msg').textContent=tt('If this account exists, a password reset message will be sent.');};
@@ -27,7 +644,7 @@ function signIn(message=''){
 }
 function emailVerification(email=verificationEmail){
  verificationPending=true;verificationEmail=email||'';state=null;
- $('identity').textContent='';$('pageTitle').textContent=tt('Verify your email');$('logout').hidden=true;$('nav').replaceChildren();$('msg').textContent='';
+ $('identity').textContent='';$('pageTitle').textContent=tt('Verify your email');$('logout').hidden=true;$('nav').replaceChildren();$('msg').textContent='';EudrNav.updateNavChrome();
  $('main').innerHTML='<div class="card login"><p class="eyebrow">KODA EUDR WORKSPACE</p><h2>Verify your email</h2><p>Your password was accepted. Verify your email before opening the workspace.</p><p>'+esc(verificationEmail)+'</p><button id="sendVerification" type="button">Send verification email</button><button id="checkVerification" type="button">I have verified my email</button><button id="verificationBack" class="quiet-button" type="button">Back to sign in</button></div>';
  $('sendVerification').onclick=async()=>{const button=$('sendVerification');button.disabled=true;try{await firebaseRequest('sendOobCode',{requestType:'VERIFY_EMAIL',idToken:await authToken()});$('msg').textContent=tt('Verification email sent. Open the link in your inbox, then return here.');}catch{ $('msg').textContent=tt('Could not send the verification email. Try again or sign in again.');}finally{button.disabled=false;}};
  $('checkVerification').onclick=async()=>{const button=$('checkVerification');button.disabled=true;try{const account=await firebaseRequest('lookup',{idToken:await authToken()}),user=account.users?.[0];if(!user||user.emailVerified!==true){$('msg').textContent=tt('Your email is not verified yet. Open the verification link first.');return;}if(!await authToken(true))throw Error('AUTH_REQUIRED');await call('recordLogin');verificationPending=false;verificationEmail='';await load();}catch(error){$('msg').textContent=errorLabel(error);}finally{button.disabled=false;}};
@@ -35,15 +652,58 @@ function emailVerification(email=verificationEmail){
  i18n.translateUI($('main'));
 }
 function changePassword(){const email=state.user.email;$('nav').replaceChildren();$('pageTitle').textContent=tt('Change Your Password');$('main').innerHTML='<div class="card login"><h2>Change Your Password</h2><p>At least 12 characters.</p><form id="passwordForm"><label>New password<input name="newPassword" type="password" minlength="12" autocomplete="new-password" required></label><label>Confirm new password<input name="confirmPassword" type="password" minlength="12" autocomplete="new-password" required></label><button>Change password</button></form></div>';$('passwordForm').onsubmit=async e=>{e.preventDefault();const form=e.target,newPassword=form.elements.newPassword.value;if(newPassword!==form.elements.confirmPassword.value){$('msg').textContent=tt('Passwords do not match.');return;}form.querySelector('button').disabled=true;try{await authAction({action:'changePassword',password:newPassword});clearAuth();signIn(tt('Password changed. Sign in with your new password.'));$('loginEmail').value=email;}catch(error){$('msg').textContent=errorLabel(error);form.querySelector('button').disabled=false;}};i18n.translateUI($('main'));}
-async function load(){if(!sessionStorage.getItem('eudr_id_token'))return signIn();if(verificationPending)return emailVerification();try{state=await call('bootstrap');$('identity').textContent=state.user.name+' · '+(state.user.role||'');$('logout').hidden=false;if(state.authRequiredPasswordChange)return changePassword();if(selected&&!state.cases.some(c=>c.id===selected)){selected='';view='Orders';}const taskId=new URLSearchParams(location.hash.slice(1)).get('task');if(taskId){const t=state.tasks.find(t=>t.id===taskId);if(t){selected=t.case_id;view='Workspace';}}render();}catch(e){if(e.code==='AUTH_EMAIL_UNVERIFIED')return emailVerification();if(e.status===401||e.code==='AUTH_REQUIRED'){clearAuth();signIn(errorLabel(e));}else $('main').textContent=errorLabel(e);}}
-async function act(action,...args){if(busy)return;busy=true;$('msg').textContent='Saving…';const buttons=[...document.querySelectorAll('button')].map(b=>[b,b.disabled]);buttons.forEach(([b])=>b.disabled=true);try{const result=await call(action,...args);closeDrawer();await load();$('msg').textContent=result?.calendar?.status==='MANUAL_SYNC_REQUIRED'?tt('Saved. Calendar is in manual mode; use Sync task invitations to send new invitations.'):result?.calendar&&!['SYNCED','NOT_SCHEDULED'].includes(result.calendar.status)?'Saved. Calendar synchronization needs review: '+result.calendar.status:'Saved.';return result;}catch(e){$('msg').textContent=errorLabel(e)+(e.status>=500?' · '+tt('Save status is uncertain. Check the latest record before retrying; this form remains open.'):'');}finally{busy=false;buttons.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}}
-function go(v,id=''){view=v;if(id&&id!==selected){selected=id;material='';selectedChainNode='';workspaceTab='evidence';}render();}
+async function load(){if(!sessionStorage.getItem('eudr_id_token'))return signIn();if(verificationPending)return emailVerification();try{state=await call('bootstrap');$('identity').textContent=state.user.name+' · '+(state.user.role||'');$('logout').hidden=false;if(state.authRequiredPasswordChange)return changePassword();EudrNav.revalidateAndRestore();const taskId=new URLSearchParams(location.hash.slice(1)).get('task');if(taskId){const t=state.tasks.find(t=>t.id===taskId);if(t){selected=t.case_id;if(t.material_id)material=t.material_id;if(t.source_id)selectedSource=t.source_id;if(t.chain_node_id)selectedChainNode=t.chain_node_id;view='Workspace';}}render();}catch(e){if(e.code==='AUTH_EMAIL_UNVERIFIED')return emailVerification();if(e.status===401||e.code==='AUTH_REQUIRED'){clearAuth();signIn(errorLabel(e));}else $('main').textContent=errorLabel(e);}}
+async function act(action,...args){if(busy)return;const opId=EudrOps.start({action,label:`Saving ${action.replace(/([A-Z])/g,' $1').toLowerCase()}`,level:3,step:'Saving…'});$('msg').textContent='Saving…';const buttons=[...document.querySelectorAll('button')].map(b=>[b,b.disabled]);buttons.forEach(([b])=>b.disabled=true);try{const result=await call(action,...args);EudrNav.markDirty(false);EudrOps.succeed(opId,'Saved.');closeDrawer();await load();$('msg').textContent=result?.calendar?.status==='MANUAL_SYNC_REQUIRED'?tt('Saved. Calendar is in manual mode; use Sync task invitations to send new invitations.'):result?.calendar&&!['SYNCED','NOT_SCHEDULED'].includes(result.calendar.status)?'Saved. Calendar synchronization needs review: '+result.calendar.status:'Saved.';return result;}catch(e){const uncertain=e.status>=500||['UPSTREAM_TIMEOUT','NETWORK_ERROR'].includes(e.code);EudrOps.fail(opId,e,{uncertain});$('msg').textContent=errorLabel(e)+(uncertain?' · '+tt('Save status is uncertain. Check the latest record before retrying; this form remains open.'):'');}finally{busy=false;buttons.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}}
+function go(v,id=''){
+ const isOrderSwitch=Boolean(id&&id!==selected);
+ const saved=id?EudrNav.getOrderContext(id):null;
+ EudrNav.navigate({
+  view:v,
+  caseId:id||selected,
+  productId:isOrderSwitch?(saved?.productId||''):selectedProduct,
+  materialId:isOrderSwitch?(saved?.materialId||''):material,
+  sourceId:isOrderSwitch?(saved?.sourceId||''):selectedSource,
+  chainNodeId:isOrderSwitch?(saved?.chainNodeId||''):selectedChainNode,
+  workspaceTab:isOrderSwitch?(saved?.workspaceTab||'evidence'):workspaceTab,
+  workspaceStep:isOrderSwitch?(saved?.workspaceStep||'order'):(v==='Workspace'?workspaceStep:'order'),
+  dashboardKpiFilter:v==='Orders'?dashboardKpiFilter:'',
+  myTasksFilter:v==='My Tasks'?myTasksFilter:''
+ });
+}
 function clearDocumentPreview(){window.EudrGeo?.close?.();pdfPreviewAbort?.abort();pdfPreviewAbort=null;pdfPreviewCleanup?.();pdfPreviewCleanup=null;if(documentUrl){URL.revokeObjectURL(documentUrl);documentUrl='';}}
-function closeDrawer(){clearDocumentPreview();$('drawer').close();}
-function drawer(html){closeDrawer();$('drawerContent').innerHTML=html;$('drawer').showModal();i18n.translateUI($('drawer'));}
-$('closeDrawer').onclick=closeDrawer;$('drawer').addEventListener('close',()=>{if(!$('drawer').open)clearDocumentPreview();});
+function closeDrawer(opts={}){clearDocumentPreview();if(!opts.fromHistory)EudrNav.markDirty(false);$('drawer').close();}
+function drawer(html){closeDrawer({fromHistory:true});$('drawerContent').innerHTML=html;$('drawer').showModal();bindDirtyTracking($('drawerContent'));EudrNav.updateNavChrome();i18n.translateUI($('drawer'));}
+function bindDirtyTracking(root){
+ if(!root?.querySelectorAll)return;
+ root.querySelectorAll('form').forEach(f=>{
+  if(f.id==='loginForm'||f.classList?.contains('filters'))return;
+  f.addEventListener?.('input',()=>EudrNav.markDirty(true));
+  f.addEventListener?.('change',()=>EudrNav.markDirty(true));
+  f.addEventListener?.('submit',()=>EudrNav.markDirty(false));
+ });
+}
+$('closeDrawer').onclick=()=>{EudrNav.closeViewer({fromCloseButton:true});};
+$('drawer').addEventListener('close',()=>{if(!$('drawer').open)clearDocumentPreview();});
 $('logout').onclick=()=>{clearAuth();retryKeys.clear();closeDrawer();signIn();};
 $('language').onchange=e=>{i18n.setLanguage(e.target.value);if(verificationPending)emailVerification();else if(state?.authRequiredPasswordChange)changePassword();else if(state)render();else signIn();};
+if($('opsStatusBtn'))$('opsStatusBtn').onclick=()=>EudrOps.togglePanel();
+if($('sidebarCollapseBtn'))$('sidebarCollapseBtn').onclick=()=>{
+ const shell=$('appShell')||document.querySelector('.app-shell');
+ if(!shell)return;
+ const collapsed=shell.classList.toggle('sidebar-collapsed');
+ $('sidebarCollapseBtn').setAttribute('aria-expanded',String(!collapsed));
+ $('sidebarCollapseBtn').textContent=collapsed?'▸':'◂';
+ try{if(typeof localStorage!=='undefined')localStorage.setItem('eudr_sidebar_collapsed',collapsed?'1':'0');}catch{}
+};
+if($('mobileMenuBtn'))$('mobileMenuBtn').onclick=()=>{
+ const sb=$('sidebar')||document.querySelector('.sidebar');
+ if(!sb)return;
+ const open=sb.classList.toggle('mobile-open');
+ $('mobileMenuBtn').setAttribute('aria-expanded',String(open));
+};
+if(typeof window!=='undefined'&&window.addEventListener){
+ window.addEventListener('popstate',()=>{if(state&&EudrNav.canBack())EudrNav.back();});
+}
 function button(label,action,id='',disabled=false){return `<button data-action="${action}" data-id="${esc(id)}" ${disabled?'disabled':''}>${esc(label)}</button>`;}
 function field(name,label,type='text',value='',required=false){return `<label>${esc(label)}<input name="${name}" type="${type}" value="${esc(value)}" ${required?'required':''} maxlength="2000"></label>`;}
 function select(name,label,options,value=''){return `<label>${esc(label)}<select name="${name}">${options.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${v===value?'selected':''}>${esc(l)}</option>`;}).join('')}</select></label>`;}
@@ -56,73 +716,132 @@ function render(){
  if(cap('SUPPLIER_EDIT'))tabs.push('Suppliers');if(roles('ADMIN'))tabs.push('Users','Settings');
  if(supplier()&&!['Workspace',...tabs].includes(view))view='My Tasks';
  $('pageTitle').textContent=tt(view==='Workspace'?'Order workspace':view);
- $('nav').innerHTML=tabs.map(t=>`<button data-view="${t}" class="${view===t?'active':''}" ${view===t?'aria-current="page"':''}>${t}</button>`).join('');
- $('nav').querySelectorAll('button').forEach(b=>b.onclick=()=>go(b.dataset.view));
+ if($('defaultSidebarSection'))$('defaultSidebarSection').hidden=true;
+ const groups=[
+  {label:'OPERATIONS',items:['Dashboard','Orders','My Tasks','Calendar'].filter(t=>tabs.includes(t))},
+  {label:'EUDR MANAGEMENT',items:['Suppliers','AI Assistant','Export'].filter(t=>tabs.includes(t))},
+  {label:'ADMINISTRATION',items:['Audit Trail','Users','Settings'].filter(t=>tabs.includes(t))}
+ ].filter(g=>g.items.length>0);
+ $('nav').innerHTML=groups.map(g=>`<div class="nav-group" role="group" aria-label="${esc(tt(g.label))}"><div class="sidebar-section" data-i18n="${esc(g.label)}">${esc(tt(g.label))}</div>${g.items.map(t=>`<button data-view="${t}" class="${view===t||(view==='Workspace'&&t==='Orders')?'active':''}" ${view===t?'aria-current="page"':''} title="${esc(tt(t))}">${t}</button>`).join('')}</div>`).join('');
+ $('nav').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  const sb=$('sidebar')||document.querySelector('.sidebar');
+  if(sb?.classList?.contains('mobile-open')){sb.classList.remove('mobile-open');$('mobileMenuBtn')?.setAttribute('aria-expanded','false');}
+  if(b.dataset.view==='Orders')dashboardKpiFilter='';
+  if(b.dataset.view==='My Tasks')myTasksFilter='';
+  go(b.dataset.view);
+ });
  const screens={Dashboard:dashboard,Orders:orders,'My Tasks':myTasks,Calendar:calendar,'AI Assistant':promptStudio,Export:exports,'Audit Trail':audit,Workspace:workspace,Users:users,Suppliers:suppliers,Settings:settings};
  $('main').classList.toggle('my-tasks-screen',view==='My Tasks');
- (screens[view]||orders)();bind();i18n.translateUI(document);
+ (screens[view]||orders)();bind();bindDirtyTracking($('main'));EudrNav.updateNavChrome();EudrOps.togglePanel(false);i18n.translateUI(document);
 }
 function orderProductNames(c){const names=(state.products||[]).filter(p=>p.case_id===c.id&&p.active==='YES').sort((a,b)=>Number(a.sequence||0)-Number(b.sequence||0)).map(p=>p.product_name).filter(Boolean);return names.join(', ')||c.product||c.customer||'—';}
-function filtered(){return state.cases.filter(c=>{const mats=state.materials.filter(m=>m.case_id===c.id),tasks=state.tasks.filter(t=>t.case_id===c.id),docs=state.docs.filter(d=>d.case_id===c.id),supIds=new Set(tasks.map(t=>t.supplier_id)),supNames=state.suppliers.filter(s=>supIds.has(s.id)).map(s=>s.name),geos=state.geo.filter(g=>g.case_id===c.id);
+function isRequiredTask(t){return Boolean(t&&t.active!=='NO'&&t.required!=='NO'&&t.override_state!=='NOT_REQUIRED'&&t.override_state!=='OPTIONAL');}
+function filtered(){return state.cases.filter(c=>{
+ if(dashboardKpiFilter==='ACTIVE_ORDERS'&&c.status==='CLOSED')return false;
+ const mats=state.materials.filter(m=>m.case_id===c.id),tasks=state.tasks.filter(t=>t.case_id===c.id),docs=state.docs.filter(d=>d.case_id===c.id),supIds=new Set(tasks.map(t=>t.supplier_id)),supNames=state.suppliers.filter(s=>supIds.has(s.id)).map(s=>s.name),geos=state.geo.filter(g=>g.case_id===c.id);
  const search=[c.so,c.customer,c.product,orderProductNames(c),...mats.map(m=>m.material),...supNames,...docs.map(d=>d.name),...tasks.map(t=>t.assigned_reviewer)].join(' ').toLowerCase();return (!filter.q||search.includes(filter.q.toLowerCase()))&&(!filter.status||c.status===filter.status)&&(!filter.supplier||supIds.has(filter.supplier))&&(!filter.owner||tasks.some(t=>t.owner===filter.owner)||c.owner===filter.owner)&&(!filter.material||mats.some(m=>m.material===filter.material))&&(!filter.block||tasks.some(t=>t.evidence_block===filter.block))&&(!filter.geo||geos.some(g=>g.verification_status===filter.geo))&&(!filter.from||String(c.created_at).slice(0,10)>=filter.from)&&(!filter.to||String(c.created_at).slice(0,10)<=filter.to)&&(!filter.due||filter.due==='OVERDUE'&&c.due&&c.due<today()||filter.due==='DUE_TODAY'&&c.due===today());});}
 function filters(){return `<div class="card filters"><label>Global search<input id="f-q" value="${esc(filter.q)}" placeholder="Order, product, supplier, material, document, reviewer"></label>${select('f-status','Stage',[['','All'],...new Set(state.cases.map(c=>c.status))],filter.status)}${select('f-supplier','Supplier',[['','All'],...state.suppliers.map(s=>[s.id,s.name])],filter.supplier)}${select('f-owner','Assigned user',[['','All'],...new Set(state.tasks.map(t=>t.owner).filter(Boolean))],filter.owner)}${select('f-material','Material',[['','All'],...new Set(state.materials.map(m=>m.material))],filter.material)}${select('f-block','Evidence block',[['','All'],...new Set(state.tasks.map(t=>t.evidence_block).filter(Boolean))],filter.block)}${select('f-geo','GEO status',[['','All'],'REVIEW_REQUIRED','VERIFIED','REJECTED'],filter.geo)}${select('f-due','Due status',[['','All'],['OVERDUE','Overdue'],['DUE_TODAY','Due today']],filter.due)}${field('f-from','Created from','date',filter.from)}${field('f-to','Created to','date',filter.to)}<button id="applyFilters">Apply filters</button><button id="clearFilters">Clear</button></div>`;}
-function bindFilters(draw){$('applyFilters').onclick=()=>{Object.keys(filter).forEach(k=>filter[k]=k==='q'?$('f-q').value:document.querySelector(`[name="f-${k}"]`).value);draw();bind();};$('clearFilters').onclick=()=>{Object.keys(filter).forEach(k=>filter[k]='');draw();bind();};}
+function bindFilters(draw){$('applyFilters').onclick=()=>{Object.keys(filter).forEach(k=>filter[k]=k==='q'?$('f-q').value:document.querySelector(`[name="f-${k}"]`).value);draw();bind();};$('clearFilters').onclick=()=>{Object.keys(filter).forEach(k=>filter[k]='');dashboardKpiFilter='';draw();bind();};}
 function orderTable(cases){
  if(!cases.length)return '<div class="empty-state order-empty"><div class="empty-icon">◇</div><h3>No orders found</h3><p>Adjust the search or filters to see matching orders.</p></div>';
  return '<div class="order-board">'+cases.map(c=>{
-  const mats=state.materials.filter(m=>m.case_id===c.id),ts=state.tasks.filter(t=>t.case_id===c.id),ss=state.suppliers.filter(s=>ts.some(t=>t.supplier_id===s.id));
+  const mats=state.materials.filter(m=>m.case_id===c.id&&m.active!=='NO'),ts=state.tasks.filter(t=>t.case_id===c.id&&t.active!=='NO'),ss=state.suppliers.filter(s=>ts.some(t=>t.supplier_id===s.id));
   const pct=Math.max(0,Math.min(100,Number(c.readiness)||0));
-  const missing=ts.filter(t=>t.status==='MISSING'&&t.required!=='NO').length;
+  const missing=ts.filter(t=>isRequiredTask(t)&&t.status==='MISSING').length;
   const label=c.status==='CLOSED'?'Closed':missing?'Needs attention':String(c.status||'In progress').replace(/_/g,' ');
   return `<div class="order-item"><div class="order-mark">SO</div><div class="order-copy"><strong>${esc(c.so)} – ${esc(orderProductNames(c))}</strong><small>${esc(c.customer)} · ${mats.length} material${mats.length===1?'':'s'} · ${ss.length} supplier${ss.length===1?'':'s'}</small><div class="order-progress" aria-label="${pct}% evidence approved"><progress value="${pct}" max="100">${pct}%</progress></div></div><div class="order-meta"><span class="status-pill ${missing?'warning':''}">${esc(label)}</span><strong>${esc(c.accepted)}/${esc(c.total)} approved</strong><span class="${c.due&&c.due<today()&&c.status!=='CLOSED'?'overdue':''}">${esc(c.due||'No due date')}</span></div>${button('Open →','open',c.id)}</div>`;
  }).join('')+'</div>';
 }
+function computeDashboardMetrics(){
+ const cases=state?.cases||[],active=cases.filter(c=>c.status!=='CLOSED'),ids=new Set(cases.map(c=>c.id)),activeIds=new Set(active.map(c=>c.id));
+ const activeTasks=(state?.tasks||[]).filter(t=>ids.has(t.case_id)&&t.active!=='NO');
+ const openOrderTasks=activeTasks.filter(t=>activeIds.has(t.case_id));
+ const requiredTasks=activeTasks.filter(isRequiredTask);
+ const openRequiredTasks=openOrderTasks.filter(isRequiredTask);
+ const docs=(state?.docs||[]).filter(d=>ids.has(d.case_id));
+ const overdueOrders=active.filter(c=>c.due&&c.due<today());
+ const overdueTasks=openRequiredTasks.filter(t=>t.status!=='APPROVED'&&t.due&&t.due<today());
+ const missingRequired=openRequiredTasks.filter(t=>t.status==='MISSING');
+ const reviewingAll=activeTasks.filter(t=>['UPLOADED','SUBMITTED','IN_REVIEW'].includes(t.status));
+ const awaitingMyReview=reviewingAll.filter(t=>t.assigned_reviewer===state?.user?.email||(!t.assigned_reviewer&&(review()||roles('ADMIN'))&&taskForUser(t)));
+ const waitingSupplier=openRequiredTasks.filter(t=>Boolean(t.supplier_id)&&['MISSING','REQUESTED','MORE_INFO_REQUIRED','REJECTED'].includes(t.status));
+ const approvedRequired=requiredTasks.filter(t=>t.status==='APPROVED');
+ const attentionTasks=openRequiredTasks.filter(t=>t.status!=='APPROVED'&&(t.due&&t.due<today()||['MISSING','REJECTED','MORE_INFO_REQUIRED','SUBMITTED','UPLOADED','IN_REVIEW'].includes(t.status)));
+ const approvedDocs=docs.filter(d=>d.kind==='EVIDENCE'&&d.status==='APPROVED'&&d.active_version==='YES').length;
+ const totalRequired=requiredTasks.length,pct=totalRequired?Math.round(approvedRequired.length/totalRequired*100):0;
+ return {cases,active,activeTasks,requiredTasks,openRequiredTasks,overdueOrders,overdueTasks,missingRequired,reviewingAll,awaitingMyReview,waitingSupplier,approvedRequired,attentionTasks,approvedDocs,totalRequired,pct};
+}
 function dashboard(){
- const cases=state.cases,active=cases.filter(c=>c.status!=='CLOSED'),ids=new Set(cases.map(c=>c.id));
- const tasks=state.tasks.filter(t=>ids.has(t.case_id)),docs=state.docs.filter(d=>ids.has(d.case_id));
- const overdue=active.filter(c=>c.due&&c.due<today());
- const missing=tasks.filter(t=>t.status==='MISSING'&&t.required!=='NO');
- const reviewing=tasks.filter(t=>['UPLOADED','SUBMITTED','IN_REVIEW'].includes(t.status));
- const actionTasks=tasks.filter(t=>t.required!=='NO'&&t.status!=='APPROVED'&&(t.due&&t.due<today()||['MISSING','REJECTED','MORE_INFO_REQUIRED','SUBMITTED','UPLOADED'].includes(t.status)))
-  .sort((a,b)=>Number(!!b.due&&b.due<today())-Number(!!a.due&&a.due<today())||String(a.due||'9999').localeCompare(String(b.due||'9999'))).slice(0,4);
- const approved=docs.filter(d=>d.kind==='EVIDENCE'&&d.status==='APPROVED'&&d.active_version==='YES').length;
- const total=tasks.length,pct=total?Math.round(tasks.filter(t=>t.status==='APPROVED').length/total*100):0;
+ const m=computeDashboardMetrics();
+ const {cases,active,requiredTasks,overdueOrders,overdueTasks,missingRequired,reviewingAll,awaitingMyReview,waitingSupplier,approvedRequired,attentionTasks,approvedDocs,totalRequired,pct}=m;
+ const actionTasks=attentionTasks.slice().sort((a,b)=>Number(!!b.due&&b.due<today())-Number(!!a.due&&a.due<today())||String(a.due||'9999').localeCompare(String(b.due||'9999'))).slice(0,4);
  const circumference=2*Math.PI*36,dashOffset=circumference*(1-pct/100);
  const notices=(state.notifications||[]).filter(n=>n.read!=='YES').slice(0,3);
  const date=new Intl.DateTimeFormat('en',{timeZone:'Asia/Ho_Chi_Minh',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  $('main').innerHTML=`<div class="dashboard-heading"><div><p class="eyebrow">KODA / EUDR OPERATIONS</p><h1>Evidence control center</h1><p>Operational picture · ${esc(date)} · Vietnam time</p></div>${manage()&&cases.length?button('＋ New order','newOrder'):''}</div>`+
  (state.legal?.reviewDue?'<p class="warn">Legal rule review is due. Evidence completeness does not establish legal compliance.</p>':'')+
- `<div class="hero-grid"><section class="hero-panel"><div><p class="eyebrow">${cases.length?'TODAY’S PRIORITIES':'GET STARTED'}</p><h2>${cases.length?`${overdue.length+missing.length+reviewing.length} items across your evidence workflow`:'Every order starts with clear evidence.'}</h2><p>${cases.length?'Review deadlines, missing files and submissions in one place. Open an order to follow its materials and evidence.':'Create a Sales Order, confirm its materials, then assign evidence to the right people and suppliers.'}</p></div><div class="hero-bottom">${manage()?button(cases.length?'Create another order →':'Create first order →','newOrder'):button('View my tasks →','openTasks')}<span class="hero-footnote">Human review remains required</span></div></section><section class="readiness-panel"><div class="readiness-ring-wrap"><svg class="readiness-ring" width="88" height="88" viewBox="0 0 88 88" aria-hidden="true"><circle class="readiness-ring-track" cx="44" cy="44" r="36" fill="none" stroke-width="7"></circle><circle class="readiness-ring-progress" cx="44" cy="44" r="36" fill="none" stroke-width="7" stroke-dasharray="${circumference.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}"></circle></svg><div><p class="eyebrow">EVIDENCE PROGRESS</p><div class="readiness-value">${total?pct:'—'}${total?'<small>%</small>':''}</div><p>${total?`${approved} approved active files · ${total} evidence tasks`:'No evidence tasks registered yet'}</p></div></div><div><div class="readiness-bar"><progress value="${pct}" max="100">${pct}%</progress></div><div class="subline"><span>Approved tasks</span><span>${tasks.filter(t=>t.status==='APPROVED').length} / ${total}</span></div></div></section></div>`+
- `<div class="kpi-grid"><div class="kpi"><span>Active orders</span><strong>${active.length}</strong></div><div class="kpi alert"><span>Overdue orders</span><strong>${overdue.length}</strong></div><div class="kpi review"><span>In review</span><strong>${reviewing.length}</strong></div><div class="kpi"><span>Missing evidence</span><strong>${missing.length}</strong></div></div>`+
+ `<div class="hero-grid"><section class="hero-panel"><div><p class="eyebrow">${cases.length?'TODAY’S PRIORITIES':'GET STARTED'}</p><h2>${cases.length?`${attentionTasks.length} required evidence tasks need attention across ${active.length} active orders`:'Every order starts with clear evidence.'}</h2><p>${cases.length?'Review deadlines, missing files and submissions in one place. Open an order to follow its materials and evidence.':'Create a Sales Order, confirm its materials, then assign evidence to the right people and suppliers.'}</p>${cases.length?`<div class="hero-metrics-breakdown" role="list" aria-label="Unit-separated summary"><span class="hero-metric-pill" role="listitem">${overdueOrders.length} ${esc(tt('Overdue orders'))}</span><span class="hero-metric-pill" role="listitem">${overdueTasks.length} ${esc(tt('Overdue evidence tasks'))}</span><span class="hero-metric-pill" role="listitem">${missingRequired.length} ${esc(tt('Missing required evidence'))}</span><span class="hero-metric-pill" role="listitem">${awaitingMyReview.length} ${esc(tt('Awaiting my review'))}</span></div>`:''}</div><div class="hero-bottom">${manage()?button(cases.length?'Create another order →':'Create first order →','newOrder'):button('View my tasks →','openTasks')}<span class="hero-footnote">Human review remains required</span></div></section><section class="readiness-panel"><div class="readiness-ring-wrap"><svg class="readiness-ring" width="88" height="88" viewBox="0 0 88 88" aria-hidden="true"><circle class="readiness-ring-track" cx="44" cy="44" r="36" fill="none" stroke-width="7"></circle><circle class="readiness-ring-progress" cx="44" cy="44" r="36" fill="none" stroke-width="7" stroke-dasharray="${circumference.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}"></circle></svg><div><p class="eyebrow">EVIDENCE PROGRESS</p><div class="readiness-value">${totalRequired?pct:'—'}${totalRequired?'<small>%</small>':''}</div><p>${totalRequired?`${approvedDocs} approved active files · ${totalRequired} required evidence tasks`:'No evidence tasks registered yet'}</p></div></div><div><div class="readiness-bar"><progress value="${pct}" max="100">${pct}%</progress></div><div class="subline"><span>Approved required tasks</span><span>${approvedRequired.length} / ${totalRequired}</span></div></div></section></div>`+
+ `<div class="kpi-grid kpi-grid--p2" role="region" aria-label="Operational KPIs">
+  <button type="button" class="kpi kpi-button" data-kpi="ACTIVE_ORDERS" title="${esc(tt('Orders with status other than CLOSED'))}"><span>${esc(tt('Active Orders'))}</span><strong>${active.length}</strong><small class="kpi-unit">${cases.length} ${esc(tt('total orders'))}</small></button>
+  <button type="button" class="kpi kpi-button alert" data-kpi="OVERDUE_TASKS" title="${esc(tt('Required evidence tasks past due date on active orders'))}"><span>${esc(tt('Overdue Evidence Tasks'))}</span><strong>${overdueTasks.length}</strong><small class="kpi-unit">${overdueOrders.length} ${esc(tt('overdue orders'))}</small></button>
+  <button type="button" class="kpi kpi-button review" data-kpi="AWAITING_REVIEW" title="${esc(tt('Submitted or uploaded evidence awaiting your review decision'))}"><span>${esc(tt('Awaiting My Review'))}</span><strong>${awaitingMyReview.length}</strong><small class="kpi-unit">${reviewingAll.length} ${esc(tt('total in review'))}</small></button>
+  <button type="button" class="kpi kpi-button" data-kpi="MISSING_REQUIRED" title="${esc(tt('Active required evidence tasks still missing files (excludes optional)'))}"><span>${esc(tt('Missing Required Evidence'))}</span><strong>${missingRequired.length}</strong><small class="kpi-unit">${esc(tt('Required tasks only'))}</small></button>
+  <button type="button" class="kpi kpi-button" data-kpi="WAITING_SUPPLIER" title="${esc(tt('Required supplier-assigned tasks pending upload or revision'))}"><span>${esc(tt('Waiting for Supplier'))}</span><strong>${waitingSupplier.length}</strong><small class="kpi-unit">${esc(tt('Supplier queue'))}</small></button>
+  <button type="button" class="kpi kpi-button kpi-approved" data-kpi="APPROVED_REQUIRED" title="${esc(tt('Approved required evidence tasks out of total required tasks'))}"><span>${esc(tt('Approved Required Evidence'))}</span><strong>${approvedRequired.length}/${totalRequired}</strong><small class="kpi-unit">${pct}% · ${approvedDocs} ${esc(tt('active files'))}</small></button>
+ </div>`+
  (!cases.length?`<div class="onboarding"><div class="onboarding-step"><span>01 / ORDER</span><strong>Register the Sales Order</strong><p>Add the SO PDF, customer and evidence due date.</p></div><div class="onboarding-step"><span>02 / MATERIALS</span><strong>Confirm materials</strong><p>MP enters materials and adds Material PO when available.</p></div><div class="onboarding-step"><span>03 / EVIDENCE</span><strong>Collect and review</strong><p>Assign owners, receive original files and record human decisions.</p></div></div>`:
- `<div class="dashboard-columns"><section class="card"><div class="section-title"><h2>Needs attention</h2>${button('All tasks →','openTasks')}</div>${actionTasks.length?actionTasks.map((t,i)=>{const c=cases.find(c=>c.id===t.case_id),m=state.materials.find(m=>m.id===t.material_id);return `<div class="attention-item"><span class="attention-number">${String(i+1).padStart(2,'0')}</span><div class="attention-copy"><strong>${esc(c?.so)} · ${esc(t.evidence)}</strong><small>${esc(m?.material||'Material pending')} · ${esc(t.due||'No due date')} · ${esc(t.status)}</small></div>${button('Open','open',t.case_id)}</div>`;}).join(''):'<div class="empty-state"><div class="empty-icon">✓</div><h3>No urgent tasks</h3><p>Assigned work and due dates will appear here.</p></div>'}</section><section class="card"><div class="section-title"><h2>Recent orders</h2>${button('View all →','openOrders')}</div>${cases.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).slice(0,4).map(c=>`<div class="order-item"><div class="order-mark">SO</div><div class="order-copy"><strong>${esc(c.so)} – ${esc(orderProductNames(c))}</strong><small>${esc(c.customer)} · ${esc(c.status)}</small></div>${button('Open','open',c.id)}</div>`).join('')}${notices.length?`<h3 class="notice-heading">Notifications</h3>${notices.map(n=>`<div class="attention-item"><div class="attention-copy"><small>${esc(n.message)}</small></div>${button('Mark read','readNotification',n.id)}</div>`).join('')}`:''}</section></div>`);
+ `<div class="dashboard-columns"><section class="card"><div class="section-title"><h2>Needs attention</h2>${button('All tasks →','openTasks')}</div>${actionTasks.length?actionTasks.map((t,i)=>{const c=cases.find(c=>c.id===t.case_id),mat=state.materials.find(m=>m.id===t.material_id);return `<div class="attention-item"><span class="attention-number">${String(i+1).padStart(2,'0')}</span><div class="attention-copy"><strong>${esc(c?.so)} · ${esc(t.evidence)}</strong><small>${esc(mat?.material||'Material pending')} · ${esc(t.due||'No due date')} · ${esc(t.status)}</small></div>${button('Open','open',t.case_id)}</div>`;}).join(''):'<div class="empty-state"><div class="empty-icon">✓</div><h3>No urgent tasks</h3><p>Assigned work and due dates will appear here.</p></div>'}</section><section class="card"><div class="section-title"><h2>Recent orders</h2>${button('View all →','openOrders')}</div>${cases.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).slice(0,4).map(c=>`<div class="order-item"><div class="order-mark">SO</div><div class="order-copy"><strong>${esc(c.so)} – ${esc(orderProductNames(c))}</strong><small>${esc(c.customer)} · ${esc(c.status)}</small></div>${button('Open','open',c.id)}</div>`).join('')}${notices.length?`<h3 class="notice-heading">Notifications</h3>${notices.map(n=>`<div class="attention-item"><div class="attention-copy"><small>${esc(n.message)}</small></div>${button('Mark read','readNotification',n.id)}</div>`).join('')}`:''}</section></div>`);
+ document.querySelectorAll('[data-kpi]').forEach(b=>b.onclick=()=>EudrNav.openKpiTarget(b.dataset.kpi));
 }
 function orders(){
  const cases=filtered();
- $('main').innerHTML=`<div class="pagehead"><div><p class="eyebrow">CASE REGISTER</p><h2>Orders</h2><p class="muted">Follow each Sales Order from materials through evidence review.</p></div>${manage()?button('＋ New order','newOrder')+button('Import SO/PO/Excel','smartImport'):''}</div><div class="orders-toolbar"><input id="quickSearch" aria-label="Search orders" value="${esc(filter.q)}" placeholder="Search order, customer, product, supplier…"><span class="muted">${cases.length} of ${state.cases.length} orders</span></div><details class="filter-panel"><summary>Advanced filters</summary>${filters()}</details><div id="orderResults">${state.cases.length?orderTable(cases):`<div class="empty-state order-empty"><div class="empty-icon">◇</div><h3>No orders registered yet</h3><p>Register a Sales Order to begin the evidence workflow.</p>${manage()?button('Create first order →','newOrder'):''}</div>`}</div>`;
+ const kpiBanner=dashboardKpiFilter==='ACTIVE_ORDERS'?`<div class="kpi-filter-banner" role="status"><span>${esc(tt('Filtered from Dashboard KPI'))}: <strong>${esc(tt('Active Orders'))} (${cases.length})</strong></span><div class="row"><button type="button" class="quiet-button" id="clearKpiFilter">${esc(tt('Show all orders'))}</button><button type="button" class="quiet-button" id="kpiBackToDashboard">← ${esc(tt('Back to Dashboard'))}</button></div></div>`:'';
+ $('main').innerHTML=`<div class="pagehead"><div><p class="eyebrow">CASE REGISTER</p><h2>Orders</h2><p class="muted">Follow each Sales Order from materials through evidence review.</p></div>${manage()?button('＋ New order','newOrder')+button('Import SO/PO/Excel','smartImport'):''}</div>${kpiBanner}<div class="orders-toolbar"><input id="quickSearch" aria-label="Search orders" value="${esc(filter.q)}" placeholder="Search order, customer, product, supplier…"><span class="muted">${cases.length} of ${state.cases.length} orders</span></div><details class="filter-panel"><summary>Advanced filters</summary>${filters()}</details><div id="orderResults">${state.cases.length?orderTable(cases):`<div class="empty-state order-empty"><div class="empty-icon">◇</div><h3>No orders registered yet</h3><p>Register a Sales Order to begin the evidence workflow.</p>${manage()?button('Create first order →','newOrder'):''}</div>`}</div>`;
  $('quickSearch').oninput=e=>{filter.q=e.target.value;$('f-q').value=filter.q;const list=filtered();$('orderResults').innerHTML=orderTable(list);$('orderResults').querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>go('Workspace',b.dataset.id));};
+ if($('clearKpiFilter'))$('clearKpiFilter').onclick=()=>{dashboardKpiFilter='';orders();bind();};
+ if($('kpiBackToDashboard'))$('kpiBackToDashboard').onclick=()=>EudrNav.navigate({view:'Dashboard',dashboardKpiFilter:''});
  bindFilters(orders);
 }
 function taskBadge(t){
  const status=t.required==='NO'&&t.override_state!=='OPTIONAL'?'NOT_REQUIRED':t.status||'MISSING';
  const tones={MISSING:'missing',APPROVED:'approved',UPLOADED:'uploaded',SUBMITTED:'submitted',IN_REVIEW:'submitted',REJECTED:'rejected',MORE_INFO_REQUIRED:'rejected',NOT_REQUIRED:'not-required',OPTIONAL:'not-required'};
  const icons={MISSING:'!',APPROVED:'✓',UPLOADED:'↑',SUBMITTED:'→',IN_REVIEW:'○',REJECTED:'×',MORE_INFO_REQUIRED:'!',NOT_REQUIRED:'—',OPTIONAL:'○'};
- const overdue=t.required!=='NO'&&!!t.due&&t.due<today()&&!['APPROVED','NOT_REQUIRED'].includes(status);
+ const overdue=isRequiredTask(t)&&!!t.due&&t.due<today()&&!['APPROVED','NOT_REQUIRED'].includes(status);
  return `<span class="evidence-state evidence-state--${tones[status]||'neutral'}"><span aria-hidden="true">${icons[status]||'·'}</span>${esc(tt(status))}</span>${t.override_state==='OPTIONAL'?'<span class="evidence-state evidence-state--not-required">○ '+esc(tt('OPTIONAL'))+'</span>':''}${overdue?'<span class="evidence-state evidence-state--overdue">! '+esc(tt('OVERDUE'))+'</span>':''}`;
 }
-function taskTable(tasks){return '<div class="scroll"><table><thead><tr><th>Order / Evidence</th><th>Owner / Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+tasks.map(t=>{const c=state.cases.find(c=>c.id===t.case_id),m=state.materials.find(m=>m.id===t.material_id);return `<tr><td><b>${esc(c?.so)} · ${esc(m?.material)}</b><br>${esc(t.display_evidence||t.evidence)}</td><td>${esc(t.owner||'Unassigned')}<br><span class="${t.due&&t.due<today()&&t.status!=='APPROVED'&&t.required!=='NO'?'overdue':''}">${esc(t.due||'No due date')}</span></td><td>${taskBadge(t)}${t.override_reason?`<small title="${esc(t.override_by||'')} · ${esc(t.override_at||'')}">${esc(t.override_reason)}</small>`:''}</td><td><div class="row">${t.document_id?button('View','document',t.document_id):''}${cap('EVIDENCE_UPLOAD')&&t.evidence!=='Sales order'&&(t.required!=='NO'||t.override_state==='OPTIONAL')&&['MISSING','DRAFT','UPLOADED','REJECTED','MORE_INFO_REQUIRED'].includes(t.status)?button('Upload','upload',t.id):''}${review()?button('Assign','assign',t.id):''}${cap('POLICY_EDIT')&&t.evidence!=='Sales order'?button('Requirement','taskRequirement',t.id):''}${cap('POLICY_EDIT')&&t.rule_version==='ORDER_OVERRIDE'?button('Remove Evidence Type','removeScopedRequirement',t.id):''}${cap('EVIDENCE_UPLOAD')&&t.document_id&&['DRAFT','UPLOADED'].includes(t.status)?button('Remove draft','removeDraft',t.document_id):''}${button('Order','open',t.case_id)}</div></td></tr>`;}).join('')+'</tbody></table></div>';}
+function taskTable(tasks){return '<div class="scroll"><table><thead><tr><th>Order / Evidence</th><th>Owner / Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+tasks.map(t=>{const c=state.cases.find(c=>c.id===t.case_id),m=state.materials.find(m=>m.id===t.material_id);return `<tr><td><b>${esc(c?.so)} · ${esc(m?.material)}</b><br>${esc(t.display_evidence||t.evidence)}</td><td>${esc(t.owner||'Unassigned')}<br><span class="${t.due&&t.due<today()&&t.status!=='APPROVED'&&isRequiredTask(t)?'overdue':''}">${esc(t.due||'No due date')}</span></td><td>${taskBadge(t)}${t.override_reason?`<small title="${esc(t.override_by||'')} · ${esc(t.override_at||'')}">${esc(t.override_reason)}</small>`:''}</td><td><div class="row">${t.document_id?button('View','document',t.document_id):''}${cap('EVIDENCE_UPLOAD')&&t.evidence!=='Sales order'&&(t.required!=='NO'||t.override_state==='OPTIONAL')&&['MISSING','DRAFT','UPLOADED','REJECTED','MORE_INFO_REQUIRED'].includes(t.status)?button('Upload','upload',t.id):''}${review()?button('Assign','assign',t.id):''}${cap('POLICY_EDIT')&&t.evidence!=='Sales order'?button('Requirement','taskRequirement',t.id):''}${cap('POLICY_EDIT')&&t.rule_version==='ORDER_OVERRIDE'?button('Remove Evidence Type','removeScopedRequirement',t.id):''}${cap('EVIDENCE_UPLOAD')&&t.document_id&&['DRAFT','UPLOADED'].includes(t.status)?button('Remove draft','removeDraft',t.document_id):''}${button('Order','open',t.case_id)}</div></td></tr>`;}).join('')+'</tbody></table></div>';}
 function taskForUser(t){const u=state.user;if(u.role==='ADMIN')return true;if(u.role==='SUPPLIER_USER')return !!u.supplier_id&&t.supplier_id===u.supplier_id;
  if(t.owner===u.email||t.assigned_reviewer===u.email)return true;
  const department=String(u.department||u.role||'').trim().toUpperCase();return !t.owner&&!!department&&String(t.department||'').trim().toUpperCase()===department;}
-function myTasks(){$('main').classList.add('my-tasks-screen');const own=state.tasks.filter(taskForUser),end=new Date(today()+'T12:00:00Z');end.setUTCDate(end.getUTCDate()+7);const cutoff=end.toISOString().slice(0,10),pending=t=>t.status!=='APPROVED'&&t.required!=='NO';
+function myTasks(){$('main').classList.add('my-tasks-screen');const own=state.tasks.filter(t=>t.active!=='NO'&&taskForUser(t)),end=new Date(today()+'T12:00:00Z');end.setUTCDate(end.getUTCDate()+7);const cutoff=end.toISOString().slice(0,10),pending=t=>t.status!=='APPROVED'&&isRequiredTask(t);
  const follow=[['Overdue',t=>pending(t)&&t.due&&t.due<today()],['Due Today',t=>pending(t)&&t.due===today()],['Due This Week',t=>pending(t)&&t.due>today()&&t.due<=cutoff]];
- const review=[['Awaiting My Review',t=>t.assigned_reviewer===state.user.email&&['SUBMITTED','IN_REVIEW','UPLOADED'].includes(t.status)],['Waiting for Supplier',t=>!!t.supplier_id&&['MISSING','REQUESTED','MORE_INFO_REQUIRED','REJECTED'].includes(t.status)],['Completed',t=>t.status==='APPROVED']];
+ const reviewGroups=[['Awaiting My Review',t=>['SUBMITTED','IN_REVIEW','UPLOADED'].includes(t.status)&&(t.assigned_reviewer===state.user.email||(!t.assigned_reviewer&&(review()||roles('ADMIN'))))],['Waiting for Supplier',t=>isRequiredTask(t)&&!!t.supplier_id&&['MISSING','REQUESTED','MORE_INFO_REQUIRED','REJECTED'].includes(t.status)],['Completed',t=>t.status==='APPROVED']];
  const panel=items=>items.map(([name,fn])=>{const tasks=own.filter(fn);return `<section class="card task-panel"><h3>${esc(tt(name))} <span class="task-count">${tasks.length}</span></h3>${tasks.length?taskTable(tasks):'<p class="muted">No tasks in this group.</p>'}</section>`;}).join('');
- $('main').innerHTML='<h2>My Tasks</h2><div class="task-columns"><div>'+panel(follow)+'</div><div>'+panel(review)+'</div></div><section class="card"><h3>All assigned evidence</h3>'+taskTable(own)+'</section>';}
+ let kpiBanner='',bottomHeading='All assigned evidence',bottomTasks=own;
+ if(myTasksFilter){
+  const m=computeDashboardMetrics();
+  const kpiMap={
+   OVERDUE_TASKS:{label:'Overdue Evidence Tasks',items:m.overdueTasks},
+   AWAITING_REVIEW:{label:'Awaiting My Review',items:m.awaitingMyReview},
+   MISSING_REQUIRED:{label:'Missing Required Evidence',items:m.missingRequired},
+   WAITING_SUPPLIER:{label:'Waiting for Supplier',items:m.waitingSupplier},
+   APPROVED_REQUIRED:{label:'Approved Required Evidence',items:m.approvedRequired}
+  };
+  const chosen=kpiMap[myTasksFilter];
+  if(chosen){
+   bottomHeading=chosen.label;
+   bottomTasks=chosen.items;
+   kpiBanner=`<div class="kpi-filter-banner" id="myTasksKpiBanner" role="status"><span>${esc(tt('Filtered from Dashboard KPI'))}: <strong>${esc(tt(chosen.label))} (${chosen.items.length})</strong></span><div class="row"><button type="button" class="quiet-button" id="clearMyTasksFilter">${esc(tt('Show all tasks'))}</button><button type="button" class="quiet-button" id="kpiBackToDashboard">← ${esc(tt('Back to Dashboard'))}</button></div></div>`;
+  }
+ }
+ $('main').innerHTML='<h2>My Tasks</h2>'+kpiBanner+'<div class="task-columns"><div>'+panel(follow)+'</div><div>'+panel(reviewGroups)+'</div></div><section class="card" id="myTasksAllSection"><h3>'+esc(tt(bottomHeading))+'</h3>'+taskTable(bottomTasks)+'</section>';
+ if($('clearMyTasksFilter'))$('clearMyTasksFilter').onclick=()=>{myTasksFilter='';myTasks();bind();};
+ if($('kpiBackToDashboard'))$('kpiBackToDashboard').onclick=()=>EudrNav.navigate({view:'Dashboard',myTasksFilter:''});
+}
 
 let selectedProduct='',productPreviewUrl='',allMaterialsVisible=false;
 function requiredProgressMarkup(items,scope){
- const required=items.filter(t=>t.required!=='NO'&&String(t.evidence||'').toLowerCase()!=='sales order');
+ const required=items.filter(t=>isRequiredTask(t)&&String(t.evidence||'').toLowerCase()!=='sales order');
  const approved=required.filter(t=>t.status==='APPROVED').length,total=required.length;
  const label=tt('Required items approved');
  return `<span class="scope-progress" title="${esc(tt('Visible to your role'))}"><progress value="${approved}" max="${Math.max(1,total)}" aria-label="${esc(scope)}: ${approved}/${total} ${esc(label)}"></progress><span class="scope-progress-label" aria-hidden="true">${approved}/${total}</span></span>`;
@@ -163,14 +882,14 @@ function workspace(){
  ${orphaned.length?`<section class="card legacy-evidence" role="alert"><h3>Evidence needs block mapping</h3><p>${orphaned.length} existing task(s) remain outside the four folders. Keep their history and map them to a block before another upload.</p>${taskTable(orphaned)}</section>`:''}
  <section class="card dossier-step"><h3>EUDR Dossier Check</h3><p>${esc(tt('Review multiple PDFs by material and PO/lot source. Refresh results from Drive for findings, references and next actions.'))}</p><div class="row">${!supplier()&&(cap('AI_USE')||cap('EVIDENCE_UPLOAD'))?button('Open material dossier · upload, OCR/AI and results','dossierHub',c.id)+`<details class="legacy-dossier-access"><summary>${esc(tt('Previous whole-SO reviews'))}</summary><p>${esc(tt('Earlier whole-order results are kept here. This is a separate historical workflow.'))}</p>${button('Open previous SO review','legacyDossier',c.id)}</details>`:''}</div></section><section class="card dossier-step"><h3>Review & Complete Dossier</h3><p class="muted">Open the final check when document collection and review are ready.</p><div class="row">${cap('AI_USE')?button('View AI Results','aiOutputs',c.id):''}${cap('WORKFLOW_CLOSE')?button(c.status==='CLOSED'?'Reopen workflow':'Review & Complete Dossier',c.status==='CLOSED'?'reopen':'finalReview',c.id):''}</div></section></div>${!supplier()&&cap('AI_USE')?`<section id="orderChatPanel" role="tabpanel" aria-labelledby="orderChatTab" ${workspaceTab==='chat'?'':'hidden'}></section>`:''}`;
  if(!supplier()&&cap('AI_USE')){const host=document.createElement('section');host.id='orderIntelligencePanel';host.setAttribute('role','tabpanel');host.hidden=!['review','classify','issues','customer'].includes(workspaceTab);$('main').append(host);if(!host.hidden){host.setAttribute('aria-labelledby','orderIntelligence-'+workspaceTab);window.EudrIntelligence.open({mode:workspaceTab,call,state,caseId:selected,materialId:material||'',sourceId:selectedSource||'',mount:host,openDocument:documentView,openMaterialDossier:()=>document.querySelector('[data-action="dossierHub"]')?.click()}).catch(e=>host.textContent=errorLabel(e));}}
- document.querySelectorAll('[data-product]').forEach(b=>b.onclick=()=>{selectedProduct=b.dataset.product;selectedSource='';selectedChainNode='';workspace();bind();});
- document.querySelectorAll('[data-material]').forEach(b=>b.onclick=()=>{material=b.dataset.material;selectedChainNode='';selectedSource='';workspace();bind();});
- document.querySelectorAll('[data-order-tab]').forEach(b=>{b.onclick=()=>{workspaceTab=b.dataset.orderTab;workspace();bind();};b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const tabs=[...document.querySelectorAll('[data-order-tab]')],next=e.key==='Home'?tabs[0]:e.key==='End'?tabs.at(-1):tabs[(tabs.indexOf(b)+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];e.preventDefault();next.click();document.querySelector(`[data-order-tab="${next.dataset.orderTab}"]`)?.focus();};});
+ document.querySelectorAll('[data-product]').forEach(b=>b.onclick=()=>{EudrNav.pushWorkspaceStep('product',()=>{selectedProduct=b.dataset.product;selectedSource='';selectedChainNode='';});workspace();bind();EudrNav.updateNavChrome();});
+ document.querySelectorAll('[data-material]').forEach(b=>b.onclick=()=>{EudrNav.pushWorkspaceStep('material',()=>{material=b.dataset.material;selectedChainNode='';selectedSource='';});workspace();bind();EudrNav.updateNavChrome();});
+ document.querySelectorAll('[data-order-tab]').forEach(b=>{b.onclick=()=>{EudrNav.pushWorkspaceStep(workspaceStep,()=>{workspaceTab=b.dataset.orderTab;});workspace();bind();EudrNav.updateNavChrome();};b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const tabs=[...document.querySelectorAll('[data-order-tab]')],next=e.key==='Home'?tabs[0]:e.key==='End'?tabs.at(-1):tabs[(tabs.indexOf(b)+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];e.preventDefault();next.click();document.querySelector(`[data-order-tab="${next.dataset.orderTab}"]`)?.focus();};});
  if(workspaceTab==='chat'&&$('orderChatPanel'))window.EudrWorkspaceChat.open({call,state,caseId:selected,materialId:material||'',sourceId:selectedSource||'',mount:$('orderChatPanel')}).catch(e=>{$('orderChatPanel').textContent=errorLabel(e);});
  $('allMaterialsToggle').onclick=()=>{allMaterialsVisible=!allMaterialsVisible;workspace();bind();};
- document.querySelectorAll('[data-material-scope]').forEach(b=>b.onclick=async()=>{if(!b.dataset.productScope){if(!supplier()&&write())await window.EudrTrace.open({call,state,caseId:selected,productId:selectedProduct,materialId:b.dataset.materialScope,sourceId:'',drawer,refresh:async()=>{await load();return state;}});return;}selectedProduct=b.dataset.productScope;material=b.dataset.materialScope;selectedSource=b.dataset.sourceScope||'';selectedChainNode='';workspace();bind();});
- document.querySelectorAll('[data-source]').forEach(b=>b.onclick=()=>{selectedSource=b.dataset.source;selectedChainNode='';workspace();bind();});
- document.querySelectorAll('[data-chain-node]').forEach(b=>b.onclick=()=>{selectedChainNode=b.dataset.chainNode;workspace();bind();});
+ document.querySelectorAll('[data-material-scope]').forEach(b=>b.onclick=async()=>{if(!b.dataset.productScope){if(!supplier()&&write())await window.EudrTrace.open({call,state,caseId:selected,productId:selectedProduct,materialId:b.dataset.materialScope,sourceId:'',drawer,refresh:async()=>{await load();return state;}});return;}EudrNav.pushWorkspaceStep(b.dataset.sourceScope?'source':'material',()=>{selectedProduct=b.dataset.productScope;material=b.dataset.materialScope;selectedSource=b.dataset.sourceScope||'';selectedChainNode='';});workspace();bind();EudrNav.updateNavChrome();});
+ document.querySelectorAll('[data-source]').forEach(b=>b.onclick=()=>{EudrNav.pushWorkspaceStep('source',()=>{selectedSource=b.dataset.source;selectedChainNode='';});workspace();bind();EudrNav.updateNavChrome();});
+ document.querySelectorAll('[data-chain-node]').forEach(b=>b.onclick=()=>{EudrNav.pushWorkspaceStep('chain',()=>{selectedChainNode=b.dataset.chainNode;});workspace();bind();EudrNav.updateNavChrome();});
  if(productPreviewUrl){URL.revokeObjectURL(productPreviewUrl);productPreviewUrl='';}
  if(product?.image_document_id){const pid=product.id;call('getDocument',product.image_document_id).then(async f=>{const bytes=await fileBytes(f,product.image_document_id);if(selectedProduct!==pid||!$('productPreview'))return;productPreviewUrl=URL.createObjectURL(new Blob([bytes],{type:f.type}));const img=document.createElement('img');img.src=productPreviewUrl;img.alt=product.product_name;$('productPreview').replaceChildren(img);}).catch(e=>{$('msg').textContent=errorLabel(e);});}
  i18n.translateUI($('main'));
@@ -185,8 +904,8 @@ async function finalDossier(id){
 async function fileData(file){if(!file||!file.size)throw Error('INVALID_FILE');if(file.size>=3000000)throw Error('FILE_TOO_LARGE');return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(Error('Cannot read file'));r.onload=()=>resolve({name:file.name,type:file.type||(/\.geojson$/i.test(file.name)?'application/geo+json':'application/json'),data:String(r.result).split(',')[1]});r.readAsDataURL(file);});}
 
 function newOrder(){drawer('<h2>New Order</h2><form id="orderForm">'+field('so','Order No.','text','',true)+field('customer','Customer')+field('customer_code','Customer code')+field('po','Customer PO')+field('shipment_date','Shipment Date','date')+field('due','Evidence due date','date')+'<div id="newProducts"></div><button type="button" id="addProduct">+ Add Product</button><label>Sales Order PDF<input name="soFile" type="file" accept="application/pdf" required></label><p>Maximum file size: less than 3 MB</p><div id="folderChoice"></div><button type="submit">Create Order</button><p id="creationStatus" role="status"></p></form>');const form=$('orderForm');let created=null,input=null;const add=()=>{const row=document.createElement('fieldset');row.className='new-product';row.innerHTML=field('product_name','Product','text','',true)+field('sku','SKU')+field('quantity','Quantity','number','',true)+field('quantity_uom','UOM','text','pcs')+'<label>Product Image<input name="product_image" type="file" accept="image/png,image/jpeg,image/webp"></label><img class="image-preview" hidden alt="Product image preview"><p>Maximum file size: less than 3 MB</p><button type="button">Remove</button>';row.querySelector('[name="quantity"]').min='0.000001';row.querySelector('[name="quantity"]').step='any';row.querySelector('button').onclick=()=>{if($('newProducts').children.length>1)row.remove();};row.querySelector('[type="file"]').onchange=async e=>{try{const f=await fileData(e.target.files[0]),img=row.querySelector('img');img.src='data:'+f.type+';base64,'+f.data;img.hidden=false;}catch(e){$('creationStatus').textContent=errorLabel(e);}};$('newProducts').append(row);i18n.translateUI(row);};$('addProduct').onclick=add;add();
- form.oninput=()=>{if(!created)input=null;};form.onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;const controls=[...form.querySelectorAll('button')];controls.forEach(b=>b.disabled=true);try{if(!created&&!input){const fd=new FormData(form),products=[...form.querySelectorAll('.new-product')].map(row=>Object.fromEntries(['product_name','sku','quantity','quantity_uom'].map(k=>[k,row.querySelector('[name="'+k+'"]').value])));input={so:fd.get('so'),customer:fd.get('customer'),customer_code:fd.get('customer_code'),po:fd.get('po'),shipment_date:fd.get('shipment_date'),due:fd.get('due'),products,file:await fileData(form.elements.soFile.files[0])};for(const row of form.querySelectorAll('.new-product'))if(row.querySelector('[type="file"]').files[0])await fileData(row.querySelector('[type="file"]').files[0]);const candidates=await call('findOrderFolders',input.so);if(candidates.length&&!fd.get('existing_folder_id')){$('folderChoice').innerHTML=select('existing_folder_id','Review existing folder',[['','Select'],...candidates.map(c=>[c.id,c.name])]);input=null;return;}if(fd.get('existing_folder_id'))input.existing_folder_id=fd.get('existing_folder_id');}if(!created){$('creationStatus').textContent=tt('Creating order');created=await call('createOrder',input);form.querySelectorAll('input,select').forEach(x=>x.disabled=true);}
- const rows=[...form.querySelectorAll('.new-product')];for(let i=0;i<rows.length;i++){const image=rows[i].querySelector('[type="file"]').files[0];if(image&&!rows[i].dataset.uploaded){const file=await fileData(image);file.expected_document_id='';await call('uploadProductImage',created.products.find(p=>Number(p.sequence)===i+1).id,file);rows[i].dataset.uploaded='YES';}}closeDrawer();selected=created.id;view='Workspace';await load();$('msg').textContent=tt('Order created successfully');}catch(e){$('creationStatus').textContent=errorLabel(e)+(created?' · Order saved; retry pending image uploads.':'');}finally{busy=false;controls.forEach(b=>b.disabled=false);}};
+ form.oninput=()=>{if(!created)input=null;};form.onsubmit=async e=>{e.preventDefault();if(busy)return;const opId=EudrOps.start({action:'createOrder',label:'Creating order',level:3,step:'Validating information'});const controls=[...form.querySelectorAll('button')];controls.forEach(b=>b.disabled=true);try{if(!created&&!input){const fd=new FormData(form),products=[...form.querySelectorAll('.new-product')].map(row=>Object.fromEntries(['product_name','sku','quantity','quantity_uom'].map(k=>[k,row.querySelector('[name="'+k+'"]').value])));input={so:fd.get('so'),customer:fd.get('customer'),customer_code:fd.get('customer_code'),po:fd.get('po'),shipment_date:fd.get('shipment_date'),due:fd.get('due'),products,file:await fileData(form.elements.soFile.files[0])};for(const row of form.querySelectorAll('.new-product'))if(row.querySelector('[type="file"]').files[0])await fileData(row.querySelector('[type="file"]').files[0]);const candidates=await call('findOrderFolders',input.so);if(candidates.length&&!fd.get('existing_folder_id')){$('folderChoice').innerHTML=select('existing_folder_id','Review existing folder',[['','Select'],...candidates.map(c=>[c.id,c.name])]);input=null;EudrOps.cancel(opId,'Existing folder selection required');return;}if(fd.get('existing_folder_id'))input.existing_folder_id=fd.get('existing_folder_id');}if(!created){$('creationStatus').textContent=tt('Creating order');EudrOps.update(opId,{step:'Registering order'});created=await call('createOrder',input);form.querySelectorAll('input,select').forEach(x=>x.disabled=true);}
+ const rows=[...form.querySelectorAll('.new-product')];for(let i=0;i<rows.length;i++){const image=rows[i].querySelector('[type="file"]').files[0];if(image&&!rows[i].dataset.uploaded){EudrOps.update(opId,{step:'Uploading product images',progress:Math.round((i+1)/rows.length*100),unitLabel:`${i+1}/${rows.length} images`});const file=await fileData(image);file.expected_document_id='';await call('uploadProductImage',created.products.find(p=>Number(p.sequence)===i+1).id,file);rows[i].dataset.uploaded='YES';}}EudrNav.markDirty(false);EudrOps.succeed(opId,'Order created successfully');closeDrawer();selected=created.id;view='Workspace';await load();$('msg').textContent=tt('Order created successfully');}catch(e){EudrOps.fail(opId,e,{uncertain:Boolean(created)||e.status>=500});$('creationStatus').textContent=errorLabel(e)+(created?' · Order saved; retry pending image uploads.':'');}finally{busy=false;controls.forEach(b=>b.disabled=false);}};
 }
 
 
@@ -194,7 +913,7 @@ function materialsDialog(id){drawer('<h2>MP · Materials</h2><form id="materialF
 
 function assignDialog(id){const t=state.tasks.find(t=>t.id===id);drawer('<h2>Assignment</h2><form id="assignForm">'+select('owner','Assigned user',[['','Unassigned'],...state.owners.map(u=>[u.email,u.name||u.email])],t.owner)+select('supplier_id','Supplier',[['','Internal'],...state.suppliers.map(s=>[s.id,s.name])],t.supplier_id)+select('assigned_reviewer','Reviewer',[['','Unassigned'],...state.owners.filter(u=>['ADMIN','MARKETING','EUDR_REVIEWER'].includes(u.role)).map(u=>[u.email,u.name||u.email])],t.assigned_reviewer)+field('due','Due date','date',t.due)+select('priority','Priority',['LOW','NORMAL','HIGH','URGENT'],t.priority||'NORMAL')+'<button>Save assignment</button></form>');$('assignForm').onsubmit=e=>{e.preventDefault();act('updateTask',id,Object.fromEntries(new FormData(e.target)));};}
 const DOCUMENT_BYTE_CACHE=new Map();
-async function fileBytes(f,id){const cacheKey=id&&(f.sha256||f.version)?`${id}:${f.sha256||f.version}`:'';if(cacheKey&&DOCUMENT_BYTE_CACHE.has(cacheKey))return DOCUMENT_BYTE_CACHE.get(cacheKey);let out;if(!f.download_chunked)out=Uint8Array.from(atob(f.data),c=>c.charCodeAt(0));else{out=new Uint8Array(f.size);for(let i=0;i<Math.ceil(f.size/1048576);i++){$('msg').textContent='Loading document '+Math.round(i*1048576/f.size*100)+'%';const part=await call('getDocumentChunk',id,i),bytes=Uint8Array.from(atob(part.data),c=>c.charCodeAt(0));if(part.index!==i||part.size!==f.size||bytes.length!==Math.min(1048576,f.size-i*1048576))throw Error('Download integrity error');out.set(bytes,i*1048576);}$('msg').textContent='Document loaded.';}if(cacheKey){if(DOCUMENT_BYTE_CACHE.size>=25)DOCUMENT_BYTE_CACHE.delete(DOCUMENT_BYTE_CACHE.keys().next().value);DOCUMENT_BYTE_CACHE.set(cacheKey,out);}return out;}
+async function fileBytes(f,id){const cacheKey=id&&(f.sha256||f.version)?`${id}:${f.sha256||f.version}`:'';if(cacheKey&&DOCUMENT_BYTE_CACHE.has(cacheKey))return DOCUMENT_BYTE_CACHE.get(cacheKey);let out;if(!f.download_chunked)out=Uint8Array.from(atob(f.data),c=>c.charCodeAt(0));else{const totalChunks=Math.ceil(f.size/1048576),opId=EudrOps.start({action:'getDocumentChunk',label:`Downloading ${f.name||id}`,level:4,progress:0,unitLabel:`0/${totalChunks} chunks`});out=new Uint8Array(f.size);try{for(let i=0;i<totalChunks;i++){const pct=Math.round(i*1048576/f.size*100);$('msg').textContent='Loading document '+pct+'%';EudrOps.update(opId,{progress:pct,unitLabel:`${i}/${totalChunks} chunks`});const part=await call('getDocumentChunk',id,i),bytes=Uint8Array.from(atob(part.data),c=>c.charCodeAt(0));if(part.index!==i||part.size!==f.size||bytes.length!==Math.min(1048576,f.size-i*1048576))throw Error('Download integrity error');out.set(bytes,i*1048576);}EudrOps.succeed(opId,'Document loaded.');$('msg').textContent='Document loaded.';}catch(e){EudrOps.fail(opId,e);throw e;}}if(cacheKey){if(DOCUMENT_BYTE_CACHE.size>=25)DOCUMENT_BYTE_CACHE.delete(DOCUMENT_BYTE_CACHE.keys().next().value);DOCUMENT_BYTE_CACHE.set(cacheKey,out);}return out;}
 async function download(id){try{const f=await call('getDocument',id),url=URL.createObjectURL(new Blob([await fileBytes(f,id)],{type:f.type})),a=document.createElement('a');a.href=url;a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch(e){$('msg').textContent=errorLabel(e);}}
 function documentStatus(status){const tones={APPROVED:'approved',REJECTED:'rejected',MORE_INFO_REQUIRED:'rejected',SUBMITTED:'submitted',IN_REVIEW:'submitted',UPLOADED:'uploaded',MISSING:'missing',NOT_REQUIRED:'not-required'},icons={APPROVED:'✓',REJECTED:'×',MORE_INFO_REQUIRED:'!',SUBMITTED:'→',IN_REVIEW:'○',UPLOADED:'↑',MISSING:'!',NOT_REQUIRED:'—'};return `<span class="document-status document-status--${tones[status]||'neutral'}"><span aria-hidden="true">${icons[status]||'·'}</span><span data-i18n="${esc(status)}">${esc(tt(status))}</span></span>`;}
 function documentButton(label,action,id,tone='neutral',icon=''){return `<button type="button" class="document-button document-button--${tone}" data-action="${esc(action)}" data-id="${esc(id)}">${icon?'<span aria-hidden="true">'+icon+'</span>':''}<span data-i18n="${esc(label)}">${esc(tt(label))}</span></button>`;}
@@ -230,6 +949,7 @@ function bindDocumentReview(f,metadata){
 }
 async function documentView(id,initialPage=1){try{
  const f=await call('getDocument',id),metadata=state.docs.find(d=>d.id===id),processed=['REDACTED','EN_SUBTITLE','AI_OUTPUT'].includes(metadata?.kind),original=['EVIDENCE','SO'].includes(metadata?.kind);
+ EudrNav.openViewer('document',id,{page:initialPage||1,title:f.name||id});
  const discussion=`<details class="document-details"><summary>${esc(tt('Comments'))} (${f.comments.length})</summary>${write()?'<form id="documentCommentForm"><label for="documentComment">'+esc(tt('Add a comment'))+'</label><textarea id="documentComment" rows="3" maxlength="3000" required></textarea>'+select('visibility','Comment visibility',supplier()?['SHARED_WITH_SUPPLIER']:['SHARED_WITH_SUPPLIER','INTERNAL_ONLY'])+'<button type="submit" class="document-button document-button--neutral">'+esc(tt('Add Comment'))+'</button></form>':''}${f.comments.length?f.comments.map(c=>`<article class="document-comment"><strong>${esc(c.author)}</strong><small>${esc(tt(c.visibility))} · ${esc(c.created_at)}</small><p>${esc(c.comment)}</p></article>`).join(''):'<p class="muted">'+esc(tt('No comments yet.'))+'</p>'}</details>`;
  const versions=`<details class="document-details"><summary>${esc(tt('Version history'))} (${f.versions.length})</summary>${f.versions.map(v=>`<div class="document-version">${documentButton('v'+v.version,'document',v.id)}${documentStatus(v.status)}<small>${esc(tt(v.active_version==='YES'?'Active version':'Previous version'))}</small></div>`).join('')}</details>`;
  const canRedact=cap('AI_USE')&&original&&f.status==='APPROVED'&&f.active==='YES',canTranslate=cap('AI_USE')&&(original||metadata?.kind==='REDACTED'&&metadata.redaction_verified==='YES')&&f.status==='APPROVED'&&f.active==='YES';
@@ -241,13 +961,13 @@ async function documentView(id,initialPage=1){try{
  const controller=new AbortController();pdfPreviewAbort=controller;
  const documentBytes=await fileBytes(f,id);if(controller.signal.aborted)return;
  if(f.type==='application/pdf'){
-  $('preview').textContent=tt('Loading PDF preview…');
-  try{const {renderPdfPreview}=await import('/pdf-preview.mjs'),cleanup=await renderPdfPreview($('preview'),documentBytes,{signal:controller.signal,initialPage});if(pdfPreviewAbort===controller)pdfPreviewCleanup=cleanup;else cleanup();}
+  $('preview').innerHTML=EudrOps.skeleton('Loading PDF preview…',4);
+  try{const {renderPdfPreview}=await import('/pdf-preview.mjs'),cleanup=await renderPdfPreview($('preview'),documentBytes,{signal:controller.signal,initialPage:initialPage||1,onPageChange:page=>EudrNav.updateViewerPage(id,page)});if(pdfPreviewAbort===controller)pdfPreviewCleanup=cleanup;else cleanup();}
   catch(error){if(!controller.signal.aborted){$('preview').textContent=tt('PDF preview unavailable. Use Download to inspect the original.');$('msg').textContent=tt('PDF_PREVIEW_UNAVAILABLE');}}
  }else if(['image/png','image/jpeg','image/webp'].includes(f.type)){documentUrl=URL.createObjectURL(new Blob([documentBytes],{type:f.type}));const img=document.createElement('img');img.alt=f.name;img.src=documentUrl;$('preview').append(img);}else{const pre=document.createElement('pre');pre.textContent=new TextDecoder().decode(documentBytes);$('preview').append(pre);}
  }catch(e){$('msg').textContent=errorLabel(e);}}
 function upload(id){const input=document.createElement('input');input.type='file';input.accept='.pdf,.png,.jpg,.jpeg,.json,.geojson';input.onchange=async()=>{try{const selectedFile=input.files[0];if(selectedFile?.size>=2000000){if(selectedFile.size>=3000000)throw Error('FILE_TOO_LARGE');const result=await largeUpload(id,null,selectedFile);if(result){closeDrawer();await load();$('msg').textContent='File uploaded.';}return;}const file=await fileData(selectedFile);file.expected_document_id=state.tasks.find(t=>t.id===id)?.document_id||'';await act('uploadEvidence',id,file);}catch(e){$('msg').textContent=errorLabel(e);}};input.click();}
-async function largeUpload(id,kind,file){if(!file.size||file.size>=3000000)throw Error('FILE_TOO_LARGE');const task=kind?state.tasks.find(t=>t.id===state.docs.find(d=>d.id===id)?.task_id):state.tasks.find(t=>t.id===id);if(!task)throw Error('Upload task not found');const buffer=await file.arrayBuffer(),sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))].map(v=>v.toString(16).padStart(2,'0')).join(''),storageKey='eudr_upload_'+state.user.email+'_'+task.id+'_'+sha256+'_'+(kind||'EVIDENCE');let sessionId=sessionStorage.getItem(storageKey);if(!sessionId){const metadata={name:file.name,type:file.type||'application/geo+json',size:file.size,sha256,expected_document_id:task.document_id||''};if(kind){metadata.kind=kind;metadata.source_document_id=id;}const session=await call('beginUpload',task.id,metadata);sessionId=session.id;sessionStorage.setItem(storageKey,sessionId);}for(let index=0;index<Math.ceil(file.size/1048576);index++){const bytes=new Uint8Array(buffer,index*1048576,Math.min(1048576,file.size-index*1048576));let text='';for(let j=0;j<bytes.length;j+=8192)text+=String.fromCharCode(...bytes.subarray(j,j+8192));$('msg').textContent='Uploading '+Math.round(index*1048576/file.size*100)+'%';await call('uploadChunk',sessionId,index,btoa(text));}const result=await call('finishUpload',sessionId);sessionStorage.removeItem(storageKey);return result;}
+async function largeUpload(id,kind,file){if(!file.size||file.size>=3000000)throw Error('FILE_TOO_LARGE');const task=kind?state.tasks.find(t=>t.id===state.docs.find(d=>d.id===id)?.task_id):state.tasks.find(t=>t.id===id);if(!task)throw Error('Upload task not found');const totalChunks=Math.ceil(file.size/1048576),opId=EudrOps.start({action:'uploadChunk',label:`Uploading ${file.name||'evidence'}`,level:4,progress:0,unitLabel:`0/${totalChunks} chunks`});try{const buffer=await file.arrayBuffer(),sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))].map(v=>v.toString(16).padStart(2,'0')).join(''),storageKey='eudr_upload_'+state.user.email+'_'+task.id+'_'+sha256+'_'+(kind||'EVIDENCE');let sessionId=sessionStorage.getItem(storageKey);if(!sessionId){const metadata={name:file.name,type:file.type||'application/geo+json',size:file.size,sha256,expected_document_id:task.document_id||''};if(kind){metadata.kind=kind;metadata.source_document_id=id;}const session=await call('beginUpload',task.id,metadata);sessionId=session.id;sessionStorage.setItem(storageKey,sessionId);}for(let index=0;index<totalChunks;index++){const bytes=new Uint8Array(buffer,index*1048576,Math.min(1048576,file.size-index*1048576));let text='';for(let j=0;j<bytes.length;j+=8192)text+=String.fromCharCode(...bytes.subarray(j,j+8192));const pct=Math.round((index+1)/totalChunks*100);$('msg').textContent='Uploading '+pct+'%';EudrOps.update(opId,{progress:pct,unitLabel:`${index+1}/${totalChunks} chunks`});await call('uploadChunk',sessionId,index,btoa(text));}const result=await call('finishUpload',sessionId);sessionStorage.removeItem(storageKey);EudrOps.succeed(opId,'File uploaded.');return result;}catch(e){EudrOps.fail(opId,e,{uncertain:e.status>=500});throw e;}}
 function promptStudio(){$('main').innerHTML='<div class="card"><p class="eyebrow">PROMPT STUDIO</p><h2>AI Assistant</h2><p>Choose a source document. AI saves its PDF and manifest to the connected Drive folder; View AI Results lists the output.</p>'+select('promptOrder','Order',state.cases.map(c=>[c.id,c.so]),selected)+select('promptFunction','Function',['DOCUMENT_REVIEW','PRICE_REDACTION','ENGLISH_SUBTITLE'])+'<div id="promptSource"></div><button id="generatePrompt">Generate Prompt</button><div id="promptResult"></div></div>';const update=()=>{const caseId=document.querySelector('[name="promptOrder"]').value,fn=document.querySelector('[name="promptFunction"]').value,docs=state.docs.filter(d=>d.case_id===caseId&&d.active_version==='YES'&&(fn==='ENGLISH_SUBTITLE'?['SO','EVIDENCE'].includes(d.kind)||d.kind==='REDACTED'&&d.redaction_verified==='YES':['SO','EVIDENCE'].includes(d.kind))&&(fn==='DOCUMENT_REVIEW'||d.status==='APPROVED'));$('promptSource').innerHTML=select('promptDocument','Source document',fn==='DOCUMENT_REVIEW'?[['','All active original documents'],...docs.map(d=>[d.id,d.name+' · '+d.status])]:docs.map(d=>[d.id,d.name+' · '+d.status]));$('generatePrompt').disabled=fn!=='DOCUMENT_REVIEW'&&!docs.length;};document.querySelector('[name="promptOrder"]').onchange=update;document.querySelector('[name="promptFunction"]').onchange=update;update();$('generatePrompt').onclick=()=>showPrompt(document.querySelector('[name="promptOrder"]').value,document.querySelector('[name="promptFunction"]').value,document.querySelector('[name="promptDocument"]')?.value||'');}
 async function showPrompt(caseId,fn,id=''){try{
  const r=await call('getAiPrompt',caseId,fn,id),derived=['PRICE_REDACTION','ENGLISH_SUBTITLE'].includes(fn);
@@ -260,8 +980,8 @@ function renderPromptContext(context){if(!context)return;const panel=document.cr
 
 function chainDialog(id){const m=state.materials.find(m=>m.id===id);if(!m)return;const nodes=state.chain.filter(n=>n.material_id===id);drawer('<h2>Add Relationship · '+esc(m.material)+'</h2><form id="chainForm"><input id="supplierSearch" placeholder="Search supplier name / code">'+select('supplier_id','Select Existing Supplier',[['','Producer / forest owner'],...state.suppliers.filter(s=>s.active==='YES').map(s=>[s.id,s.name+' '+(s.supplier_code||'')])])+button('Create New Supplier','supplierForm','')+field('display_name','Producer / forest owner name')+select('parent_id','Parent relationship',[['','KODA'],...nodes.map(n=>[n.id,n.display_name||n.id])],selectedChainNode)+select('node_type','Node Type',['SUPPLIER','PROCESSOR','TRADER','PRODUCER','FOREST_OWNER','PLOT'])+field('plot_id','Plot ID')+select('terminal','Final producer in this branch',['NO','YES'])+select('source_document_id','Source evidence',[['','MISSING'],...state.docs.filter(d=>d.material_id===id).map(d=>[d.id,d.name])])+'<button type="submit">Add Relationship</button></form>');$('chainForm').querySelector('[data-action]').type='button';$('chainForm').onsubmit=e=>{e.preventDefault();act('addChainNode',m.case_id,{...Object.fromEntries(new FormData(e.target)),material_id:id});};$('supplierSearch').oninput=e=>{const q=e.target.value.toLowerCase();$('chainForm').elements.supplier_id.querySelectorAll('option').forEach(o=>o.hidden=!!o.value&&!o.textContent.toLowerCase().includes(q));};bind();}
 
-function reviewGeoDialog(id){drawer('<h2>GEO review</h2><form id="geoReviewForm">'+select('status','Decision',['VERIFIED','REJECTED','MORE_INFO_REQUIRED'])+'<label>Review notes<textarea name="notes" required rows="4"></textarea></label><p>Verification does not certify deforestation-free status or legal compliance.</p><button>Record review</button></form>');$('geoReviewForm').onsubmit=e=>{e.preventDefault();act('reviewGeo',id,Object.fromEntries(new FormData(e.target)));};}
-function geoDialog(id){return window.EudrGeo.open({state,materialId:id,call,drawer,refresh:async()=>{await load();return state;},onDocument:documentView,onReview:reviewGeoDialog});}
+function reviewGeoDialog(id){EudrNav.openViewer('reviewGeo',id,{title:'GEO review'});drawer('<h2>GEO review</h2><form id="geoReviewForm">'+select('status','Decision',['VERIFIED','REJECTED','MORE_INFO_REQUIRED'])+'<label>Review notes<textarea name="notes" required rows="4"></textarea></label><p>Verification does not certify deforestation-free status or legal compliance.</p><button>Record review</button></form>');$('geoReviewForm').onsubmit=e=>{e.preventDefault();act('reviewGeo',id,Object.fromEntries(new FormData(e.target)));};}
+function geoDialog(id){const m=state.materials.find(x=>x.id===id);if(m){if(m.case_id)selected=m.case_id;material=id;}EudrNav.openViewer('geo',id,{title:m?.material||tt('GeoJSON Map')});return window.EudrGeo.open({state,materialId:id,call,drawer,refresh:async()=>{await load();return state;},onDocument:documentView,onReview:reviewGeoDialog});}
 function calendarDay(day){const tasks=state.tasks.filter(t=>taskForUser(t)&&t.due===day);drawer('<h2>Tasks due · '+esc(day)+'</h2><p>'+tasks.length+' task(s) for your role.</p>'+taskTable(tasks));bind();}
 function calendar(){const y=month.getFullYear(),m=month.getMonth(),date=d=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,visible=state.tasks.filter(t=>taskForUser(t)&&t.due);
  const syncedCount=visible.filter(t=>t.calendar_sync_status==='SYNCED').length,failedCount=visible.filter(t=>['CALENDAR_SYNC_FAILED','CALENDAR_ACCESS_REQUIRED'].includes(t.calendar_sync_status)).length;
@@ -304,8 +1024,9 @@ function exports(){
  $('exportList').innerHTML=chosen.length?chosen.map(c=>{const docs=state.docs.filter(d=>d.case_id===c.id);return `<section class="export-order-section" data-export-order="${esc(c.id)}"><h3>${esc(c.so)}</h3><div class="export-columns">${column(c.id,'Original approved documents',docs.filter(d=>['SO','EVIDENCE'].includes(d.kind)))}${column(c.id,'AI processed copies',docs.filter(d=>['REDACTED','EN_SUBTITLE'].includes(d.kind)))}</div></section>`;}).join('')+'<div class="workspace-actions"><button id="exportFull">Full Package</button><button id="exportSelected">Selected Package</button></div>':'<p class="muted">Select at least one order.</p>';
  document.querySelectorAll('[name="exportDoc"]').forEach(input=>input.onchange=()=>{const caseId=input.dataset.caseId;if(!documentSelections.has(caseId))documentSelections.set(caseId,new Set([...document.querySelectorAll('[name="exportDoc"]:checked')].filter(i=>i.dataset.caseId===caseId).map(i=>i.value)));else if(input.checked)documentSelections.get(caseId).add(input.value);else documentSelections.get(caseId).delete(input.value);});
  const run=async full=>{const orders=chosen.map(c=>({case_id:c.id,...(full?{}:{document_ids:[...document.querySelectorAll('[name="exportDoc"]:checked')].filter(i=>i.dataset.caseId===c.id).map(i=>i.value)})}));if(!full&&orders.some(o=>!o.document_ids.length)){$('msg').textContent=tt('Select at least one approved document for each order.');return;}
- drawer('<h2>Export packages</h2><p id="exportProgress" role="status">'+esc(tt('Exporting ZIP…'))+'</p><div id="exportResult"></div>');try{const result=await call('exportPackages',{orders}),packages=result.packages||[],errors=result.errors||[];$('exportProgress').textContent=packages.length?tt('ZIP is ready.'):tt('Export failed.');$('exportResult').innerHTML=packages.map((p,i)=>`<p>${esc(state.cases.find(c=>c.id===p.case_id)?.so||p.case_id)} · ${esc(p.name)} · ${Math.ceil((p.size_bytes||0)/1048576*10)/10} MB <button type="button" data-download-export="${i}">${esc(tt('Download ZIP'))}</button></p>${p.excluded_document_ids?.length?`<p role="alert">${esc(tt('Excluded evidence with missing links:'))} ${esc(p.excluded_document_ids.map(id=>state.docs.find(d=>d.id===id)?.name||id).join(', '))}</p>`:''}`).join('')+(errors.length?'<p role="alert">'+esc(errors.map(e=>(state.cases.find(c=>c.id===e.case_id)?.so||e.case_id)+': '+tt(e.code)).join('; '))+'</p>':'')+(packages.length?'<p class="muted">Packages above 3 MB download in checked chunks without leaving this page.</p>':'');document.querySelectorAll('[data-download-export]').forEach(b=>b.onclick=()=>download(packages[Number(b.dataset.downloadExport)].download_id));}
- catch(error){$('exportProgress').textContent=tt('Export failed.');$('exportResult').textContent=errorLabel(error);}};
+ const opId=EudrOps.start({action:'exportPackages',label:'Exporting ZIP…',level:4,unitLabel:`${orders.length} order(s)`});
+ drawer('<h2>Export packages</h2><p id="exportProgress" role="status">'+esc(tt('Exporting ZIP…'))+'</p><div id="exportResult"></div>');try{const result=await call('exportPackages',{orders}),packages=result.packages||[],errors=result.errors||[];if(packages.length)EudrOps.succeed(opId,tt('ZIP is ready.'));else EudrOps.fail(opId,Error('Export failed'));$('exportProgress').textContent=packages.length?tt('ZIP is ready.'):tt('Export failed.');$('exportResult').innerHTML=packages.map((p,i)=>`<p>${esc(state.cases.find(c=>c.id===p.case_id)?.so||p.case_id)} · ${esc(p.name)} · ${Math.ceil((p.size_bytes||0)/1048576*10)/10} MB <button type="button" data-download-export="${i}">${esc(tt('Download ZIP'))}</button></p>${p.excluded_document_ids?.length?`<p role="alert">${esc(tt('Excluded evidence with missing links:'))} ${esc(p.excluded_document_ids.map(id=>state.docs.find(d=>d.id===id)?.name||id).join(', '))}</p>`:''}`).join('')+(errors.length?'<p role="alert">'+esc(errors.map(e=>(state.cases.find(c=>c.id===e.case_id)?.so||e.case_id)+': '+tt(e.code)).join('; '))+'</p>':'')+(packages.length?'<p class="muted">Packages above 3 MB download in checked chunks without leaving this page.</p>':'');document.querySelectorAll('[data-download-export]').forEach(b=>b.onclick=()=>download(packages[Number(b.dataset.downloadExport)].download_id));}
+ catch(error){EudrOps.fail(opId,error,{uncertain:error.status>=500});$('exportProgress').textContent=tt('Export failed.');$('exportResult').textContent=errorLabel(error);}};
  if($('exportFull'))$('exportFull').onclick=()=>run(true);if($('exportSelected'))$('exportSelected').onclick=()=>run(false);i18n.translateUI($('exportList'));};
  document.querySelectorAll('[name="exportOrder"]').forEach(input=>input.onchange=()=>{if(input.checked)selectedOrders.add(input.value);else selectedOrders.delete(input.value);draw();});draw();i18n.translateUI($('main'));}
 
@@ -327,7 +1048,7 @@ function chainEdit(id){const n=state.chain.find(n=>n.id===id);if(!n)return;const
 function policyDialog(){const rules=state.requirements||[];drawer('<h2>Evidence policy</h2><p>New versions affect new tasks. Existing approvals retain their policy version.</p><form id="policyForm">'+select('id','Existing policy',[['','Add new type'],...rules.filter(r=>r.enabled==='YES').map(r=>[r.id,r.evidence+' · '+(r.rule_version||'LEGACY')])])+field('evidence','Evidence','text','',true)+field('material','Material / category / *','text','*')+field('department','Department','text','Purchasing')+field('tier','Tier / *','text','*')+select('node_type','Node Type',['*','SUPPLIER','PROCESSOR','TRADER','PRODUCER','FOREST_OWNER','PLOT'])+select('enabled','Enabled',['YES','NO'])+select('required','Required',['YES','NO'])+field('rule_version','Rule version','text','',true)+field('effective_date','Effective date','date',today(),true)+'<button>Create policy version</button></form>');$('policyForm').elements.id.onchange=e=>{const r=rules.find(r=>r.id===e.target.value);if(r)for(const k of ['evidence','material','department','tier','node_type','enabled','required'])$('policyForm').elements[k].value=r[k]||({node_type:'*',required:'YES'}[k]||'');};$('policyForm').onsubmit=e=>{e.preventDefault();act('updateEvidenceRequirement',Object.fromEntries(new FormData(e.target)));};}
 function taskRequirementDialog(id){const t=state.tasks.find(t=>t.id===id);if(!t)return;drawer('<h2>Order / Tier Requirement</h2><p>'+esc(t.evidence)+' · '+esc(state.materials.find(m=>m.id===t.material_id)?.material||'Order')+'</p><form id="taskRequirementForm">'+select('state','Requirement',['REQUIRED','OPTIONAL','NOT_REQUIRED'],t.override_state|| (t.required==='NO'?'NOT_REQUIRED':'REQUIRED'))+'<label>Reason<textarea name="reason" required maxlength="1000" rows="4"></textarea></label><button>Save scoped decision</button></form>');$('taskRequirementForm').onsubmit=e=>{e.preventDefault();act('setTaskRequirement',id,{...Object.fromEntries(new FormData(e.target)),expected_updated_at:t.updated_at||''});};}
 function scopedRequirementDialog(materialId,block,nodeId=selectedChainNode){const m=state.materials.find(m=>m.id===materialId);if(!m)return;const nodes=state.chain.filter(n=>n.material_id===materialId);drawer('<h2>Add Order / Tier Evidence</h2><p>'+esc(m.material)+' · '+esc(block.replace(/^\d+_/,''))+'</p><form id="scopedRequirementForm">'+select('chain_node_id','Tier / relationship',[['','KODA / material level'],...nodes.map(n=>[n.id,(n.display_name||n.id)+' · Tier '+n.tier])],nodeId)+field('evidence','Evidence Type','text','',true)+select('state','Requirement',['REQUIRED','OPTIONAL','NOT_REQUIRED'],'REQUIRED')+'<label>Reason<textarea name="reason" required maxlength="1000" rows="4"></textarea></label><button>Add scoped evidence</button></form>');$('scopedRequirementForm').onsubmit=e=>{e.preventDefault();act('addScopedRequirement',m.case_id,{...Object.fromEntries(new FormData(e.target)),material_id:materialId,evidence_block:block});};}
-async function aiOutputs(id){let sync={errors:[]};try{sync=await call('syncAIOutputs',id);}catch(e){sync={errors:[{code:errorLabel(e)}]};}const data=await call('getAIOutputs',id),documents=data.documents||[];for(const d of documents){const i=state.docs.findIndex(x=>x.id===d.id);if(i<0)state.docs.push(d);else state.docs[i]={...state.docs[i],...d};}
+async function aiOutputs(id){const opId=EudrOps.start({action:'syncAIOutputs',label:'Syncing AI outputs…',level:4});let sync={errors:[]};try{sync=await call('syncAIOutputs',id);EudrOps.succeed(opId,'AI outputs synced.');}catch(e){EudrOps.fail(opId,e);sync={errors:[{code:errorLabel(e)}]};}const data=await call('getAIOutputs',id),documents=data.documents||[];for(const d of documents){const i=state.docs.findIndex(x=>x.id===d.id);if(i<0)state.docs.push(d);else state.docs[i]={...state.docs[i],...d};}
  const runRows=data.runs.filter(r=>r.result_status!=='CONDITIONAL_AWAITING_PRICE_DECISION'||documents.some(d=>d.prompt_run_id===r.id)).map(r=>{const linked=documents.filter(d=>d.prompt_run_id===r.id&&d.source_document_id===r.document_id),received=linked.length&&['AWAITING_RESULT','CONDITIONAL_AWAITING_PRICE_DECISION'].includes(r.result_status),status=received?'PDF REGISTERED · '+linked.map(d=>d.status).join(', '):r.result_status;
   return `<details><summary>${esc(r.function)} · v${esc(r.prompt_version)} · ${esc(status)}</summary><p>${esc(r.generated_by)} · ${esc(r.generated_at)}</p>${linked.length?`<p>${esc(linked.length)} PDF output${linked.length===1?'':'s'} recorded for this prompt. ${esc(r.result_status)} is the separate prompt-run status; check each PDF's human verification below.</p>`:''}<pre>${esc(r.imported_result||'No structured review result imported for this prompt run.')}</pre>${cap('AI_REVIEW')&&r.imported_result?`<button data-ai-review="${esc(r.id)}">Review findings</button>`:''}</details>`;}).join('');
  const documentRows=documents.map(d=>`<p>${button(d.name,'document',d.id)} · ${esc(d.kind==='AI_OUTPUT'?(d.ai_output_type||'AI_OUTPUT')+' · Drive output':d.kind)} · ${esc(d.status)} · ${esc(d.redaction_verified||d.translation_verified||'UNVERIFIED')}${d.kind==='AI_OUTPUT'?' · Human review required before Export.':''}</p>`).join('');

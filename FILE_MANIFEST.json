@@ -1,0 +1,104 @@
+{
+  "package": "KODA_EUDR_P2_UX_NAVIGATION_UPGRADE",
+  "version": "2.9.6-p2",
+  "branch": "feature/eudr-p2-ux-navigation",
+  "baselineCommit": "04418c465713769cac77d8ab6b9668fa02d4289b",
+  "generatedAt": "2026-10-17T03:50:41.485Z",
+  "files": [
+    {
+      "path": "public/index.html",
+      "bytes": 4554,
+      "sha256": "ea8c0a22d458eac0eaceaf91e3d96828798eb72b78fdc0e838cc46444c7c44a4"
+    },
+    {
+      "path": "public/app.js",
+      "bytes": 156411,
+      "sha256": "d05b5d2aa5800ed336f666ec4a4d5caf639fa837d422b86e4ee6d4a1ba669234"
+    },
+    {
+      "path": "public/geo.js",
+      "bytes": 21338,
+      "sha256": "a318f7287cd299c79fd41bf011533e9736bda78eb04beb5fd94a1b16b8172174"
+    },
+    {
+      "path": "public/pdf-preview.mjs",
+      "bytes": 4478,
+      "sha256": "5e489662ea815cc7bc46c9852573b4087d77bf0e7821bd47b2fd967269aa682c"
+    },
+    {
+      "path": "public/i18n.js",
+      "bytes": 95642,
+      "sha256": "710e537e8cf84448e95d478d24e3e93d20a0adecf47b5eed64c2144569d276cc"
+    },
+    {
+      "path": "public/style.css",
+      "bytes": 61938,
+      "sha256": "9ccd6cbcd1421da913f201513f0b219318a7973aabc627e0795c8e6f27a1a224"
+    },
+    {
+      "path": "tests/p2-ux-navigation.test.mjs",
+      "bytes": 23024,
+      "sha256": "53c613a2d22f306b2cdec6c4414c1aa619dbbb77cc075169367fb27e9b1c5e33"
+    },
+    {
+      "path": "docs/p2/P2_BASELINE_AUDIT.md",
+      "bytes": 5111,
+      "sha256": "bfcb6651086f0786956e6e1fb01955edd00220a9304027aa3c95691b57caa498"
+    },
+    {
+      "path": "docs/p2/P2_ARCHITECTURE.md",
+      "bytes": 2780,
+      "sha256": "1e776f64f3b3cc4307c909e77209ef75961f1c67c60d91788f901bb422e531e6"
+    },
+    {
+      "path": "docs/p2/P2_NAVIGATION_DESIGN.md",
+      "bytes": 2732,
+      "sha256": "77c01b709ebd5fb7e21113f0809e27688307c329aeac53ce0bdd43999ee0e4db"
+    },
+    {
+      "path": "docs/p2/P2_LOADING_OPERATION_DESIGN.md",
+      "bytes": 2050,
+      "sha256": "73a7594b8d02f42cf139447cbdd36c2710e323063a00d3b94bebe89da9e7e326"
+    },
+    {
+      "path": "docs/p2/P2_DASHBOARD_KPI_DEFINITIONS.md",
+      "bytes": 2615,
+      "sha256": "e73b4afc4c9155b6db1d601db4fa5267dfd28d099a1ddcf27d8cc164621a48ee"
+    },
+    {
+      "path": "docs/p2/P2_UI_CHANGELOG.md",
+      "bytes": 3075,
+      "sha256": "104106eb383d356229d27979565a826cf45fe2e3f72772de3057c1445e49c5a8"
+    },
+    {
+      "path": "docs/p2/P2_REGRESSION_RESULTS.md",
+      "bytes": 3075,
+      "sha256": "96568b88519c3d0835bd699f12a24733268b4268478545315375a30b958ca7e8"
+    },
+    {
+      "path": "docs/p2/P2_UAT_CHECKLIST.md",
+      "bytes": 2729,
+      "sha256": "96166df802ceb63340075001cfd234c8b59178f393036b412365a036b8d80029"
+    },
+    {
+      "path": "docs/p2/P2_INTEGRATION_P0_P1.md",
+      "bytes": 2193,
+      "sha256": "e3a410063a1827fd4a2188d4e0addc7a31013ae220b59a13aaf577f2896a7950"
+    },
+    {
+      "path": "docs/p2/P2_DEPLOYMENT_GUIDE.md",
+      "bytes": 1366,
+      "sha256": "dacfef786f7c140ef6ddf1362de1c6024b0bcf17d4fb3617659ced4e1dbe155e"
+    },
+    {
+      "path": "docs/p2/P2_ROLLBACK_RUNBOOK.md",
+      "bytes": 906,
+      "sha256": "ad73320e441c192acbc557eb449fa3017bde79c1e301747adc00a29ac90ec1f8"
+    },
+    {
+      "path": "docs/p2/P2_RELEASE_NOTES.md",
+      "bytes": 2763,
+      "sha256": "0b406254cd59ca50e2668585a4cd29ad92b77da4525d21f5f0dd09d8b04941a3"
+    }
+  ]
+}
