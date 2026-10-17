@@ -69,24 +69,31 @@ function setup(config){
  audit_('SETUP','','', '', 'MVP initialized; draft requirement rules');
  return {spreadsheet:db.getUrl(),folder:root.getUrl()};
 }
-function doGet(){return HtmlService.createHtmlOutput('KODA pilot API. Open the Netlify site to use the workspace.').setTitle('KODA EUDR');}
-function db_(){const id=PropertiesService.getScriptProperties().getProperty('DB_ID');if(!id)throw Error('Run setup first');return SpreadsheetApp.openById(id);}
-function rows_(n){const v=db_().getSheetByName(n).getDataRange().getValues(),h=v.shift();return v.filter(r=>r[0]).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i] instanceof Date?r[i].toISOString():r[i]])));}
+function doGet(){return HtmlService.createHtmlOutput('KODA EUDR WORKSPACE API. Open the Netlify site to use the workspace.').setTitle('KODA EUDR WORKSPACE');}
+var DB_MEMO_=null,DB_MEMO_ID_='',SHEET_MEMO_={},TABLE_CACHE_={};
+function resetDbCache_(){DB_MEMO_=null;DB_MEMO_ID_='';SHEET_MEMO_={};}
+function db_(){const id=PropertiesService.getScriptProperties().getProperty('DB_ID');if(!id)throw Error('Run setup first');if(DB_MEMO_&&DB_MEMO_ID_===id)return DB_MEMO_;DB_MEMO_=SpreadsheetApp.openById(id);DB_MEMO_ID_=id;SHEET_MEMO_={};return DB_MEMO_;}
+function sheet_(n){const d=db_();if(d===DB_MEMO_&&SHEET_MEMO_[n])return SHEET_MEMO_[n];const s=d.getSheetByName(n);if(d===DB_MEMO_&&s)SHEET_MEMO_[n]=s;return s;}
+function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));const s=sheet_(n);if(!s)return [];const db=db_(),v=s.getDataRange().getValues(),h=v.shift(),tz=db.getSpreadsheetTimeZone();const result=v.filter(r=>r[0]).map(r=>Object.fromEntries(h.filter(Boolean).map((k,i)=>[k,r[i] instanceof Date&&k==='due'?Utilities.formatDate(r[i],tz,'yyyy-MM-dd'):r[i] instanceof Date?r[i].toISOString():r[i]])));TABLE_CACHE_[n]=result;return result.map(x=>({...x}));}
 function safe_(v){return typeof v==='string' && /^[=+@\-]/.test(v)?"'"+v:v;}
-function add_(n,o){db_().getSheetByName(n).appendRow(SCHEMA[n].map(k=>safe_(o[k]===undefined?'':o[k])));}
-function patch_(n,id,o){const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');Object.keys(o).forEach(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');s.getRange(i+1,col+1).setValue(safe_(o[k]));});}
+function add_(n,o){const record=Object.fromEntries(SCHEMA[n].map(k=>[k,o[k]===undefined?'':o[k]]));sheet_(n).appendRow(SCHEMA[n].map(k=>safe_(record[k])));if(TABLE_CACHE_[n])TABLE_CACHE_[n].push(record);}
+function patch_(n,id,o){const s=sheet_(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');const keys=Object.keys(o),cols=keys.map(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');return col;});if(keys.length===1){s.getRange(i+1,cols[0]+1).setValue(safe_(o[keys[0]]));}else if(keys.length>1){const row=v[i].slice(0,SCHEMA[n].length);while(row.length<SCHEMA[n].length)row.push('');keys.forEach((k,idx)=>{row[cols[idx]]=safe_(o[k]);});s.getRange(i+1,1,1,SCHEMA[n].length).setValues([row]);}const cached=TABLE_CACHE_[n]&&TABLE_CACHE_[n].find(x=>x[SCHEMA[n][0]]===id);if(cached)Object.assign(cached,o);else delete TABLE_CACHE_[n];}
+function delete_(n,id){delete TABLE_CACHE_[n];const s=sheet_(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');s.deleteRow(i+1);}
 function uid_(){return Utilities.getUuid();}
 function now_(){return new Date().toISOString();}
 function user_(){
  const email=String(BRIDGE_ACTOR||Session.getActiveUser().getEmail()||'').toLowerCase();
  const u=rows_('05_OWNER_MASTER').find(x=>String(x.email).toLowerCase()===email&&x.active==='YES');
  if(!u)fail_('AUTH_REQUIRED','User is not active');
+ if(BRIDGE_AUTH_UID&&(u.auth_provider!=='FIREBASE'||u.auth_uid!==BRIDGE_AUTH_UID))fail_('AUTH_REQUIRED','Firebase account is not provisioned for this owner');
+ if(u.auth_provider==='FIREBASE'&&(!BRIDGE_AUTH_UID||u.auth_uid!==BRIDGE_AUTH_UID))fail_('AUTH_REQUIRED','Account identity mismatch');
+ if(u.must_change_password==='YES'&&!['bootstrap','recordLogin','authState','authPasswordChanged'].includes(BRIDGE_ACTION))fail_('PASSWORD_CHANGE_REQUIRED','Change password before accessing the workspace');
  if(!ROLES_.includes(u.role))fail_('PERMISSION_DENIED','Unknown role');
  if(u.role==='SUPPLIER_USER'&&!rows_('14_SUPPLIERS').some(s=>s.id===u.supplier_id&&s.active==='YES'))fail_('PERMISSION_DENIED','Supplier disabled');
  return u;
 }
 function manager_(u){return ['ADMIN','MARKETING'].includes(u.role);}
-function requireManager_(){return requireRole_(['ADMIN','MARKETING']);}
+function requireManager_(){return requireCapability_('ORDER_EDIT');}
 function lock_(fn){const l=LockService.getScriptLock();l.waitLock(20000);try{return fn();}finally{l.releaseLock();}}
 function audit_(action,c,e,previous,next,actor){const email=actor||BRIDGE_ACTOR||Session.getEffectiveUser().getEmail(),u=rows_('05_OWNER_MASTER').find(x=>x.email===email),order=c&&rows_('01_SO_MASTER').find(x=>x.id===c);let comment='';try{comment=JSON.parse(next||'{}').comment||'';}catch(ignore){}add_('08_ACTIVITY_LOG',{id:uid_(),timestamp:now_(),actor:email,role:u?u.role:'SYSTEM',action,object_type:action.split('_')[0],case_id:c,order_no:order?order.so:'',entity_id:e,previous,next,comment});}
 function config_(k){return (rows_('09_CONFIG').find(x=>x.key===k)||{}).value;}
