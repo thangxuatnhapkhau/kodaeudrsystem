@@ -70,13 +70,15 @@ function setup(config){
  return {spreadsheet:db.getUrl(),folder:root.getUrl()};
 }
 function doGet(){return HtmlService.createHtmlOutput('KODA EUDR WORKSPACE API. Open the Netlify site to use the workspace.').setTitle('KODA EUDR WORKSPACE');}
-function db_(){const id=PropertiesService.getScriptProperties().getProperty('DB_ID');if(!id)throw Error('Run setup first');return SpreadsheetApp.openById(id);}
-var TABLE_CACHE_={};
-function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));const db=db_(),v=db.getSheetByName(n).getDataRange().getValues(),h=v.shift(),tz=db.getSpreadsheetTimeZone();const result=v.filter(r=>r[0]).map(r=>Object.fromEntries(h.filter(Boolean).map((k,i)=>[k,r[i] instanceof Date&&k==='due'?Utilities.formatDate(r[i],tz,'yyyy-MM-dd'):r[i] instanceof Date?r[i].toISOString():r[i]])));TABLE_CACHE_[n]=result;return result.map(x=>({...x}));}
+var DB_MEMO_=null,DB_MEMO_ID_='',SHEET_MEMO_={},TABLE_CACHE_={};
+function resetDbCache_(){DB_MEMO_=null;DB_MEMO_ID_='';SHEET_MEMO_={};}
+function db_(){const id=PropertiesService.getScriptProperties().getProperty('DB_ID');if(!id)throw Error('Run setup first');if(DB_MEMO_&&DB_MEMO_ID_===id)return DB_MEMO_;DB_MEMO_=SpreadsheetApp.openById(id);DB_MEMO_ID_=id;SHEET_MEMO_={};return DB_MEMO_;}
+function sheet_(n){const d=db_();if(d===DB_MEMO_&&SHEET_MEMO_[n])return SHEET_MEMO_[n];const s=d.getSheetByName(n);if(d===DB_MEMO_&&s)SHEET_MEMO_[n]=s;return s;}
+function rows_(n){if(TABLE_CACHE_[n])return TABLE_CACHE_[n].map(x=>({...x}));const s=sheet_(n);if(!s)return [];const db=db_(),v=s.getDataRange().getValues(),h=v.shift(),tz=db.getSpreadsheetTimeZone();const result=v.filter(r=>r[0]).map(r=>Object.fromEntries(h.filter(Boolean).map((k,i)=>[k,r[i] instanceof Date&&k==='due'?Utilities.formatDate(r[i],tz,'yyyy-MM-dd'):r[i] instanceof Date?r[i].toISOString():r[i]])));TABLE_CACHE_[n]=result;return result.map(x=>({...x}));}
 function safe_(v){return typeof v==='string' && /^[=+@\-]/.test(v)?"'"+v:v;}
-function add_(n,o){delete TABLE_CACHE_[n];db_().getSheetByName(n).appendRow(SCHEMA[n].map(k=>safe_(o[k]===undefined?'':o[k])));}
-function patch_(n,id,o){delete TABLE_CACHE_[n];const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');Object.keys(o).forEach(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');s.getRange(i+1,col+1).setValue(safe_(o[k]));});}
-function delete_(n,id){delete TABLE_CACHE_[n];const s=db_().getSheetByName(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');s.deleteRow(i+1);}
+function add_(n,o){const record=Object.fromEntries(SCHEMA[n].map(k=>[k,o[k]===undefined?'':o[k]]));sheet_(n).appendRow(SCHEMA[n].map(k=>safe_(record[k])));if(TABLE_CACHE_[n])TABLE_CACHE_[n].push(record);}
+function patch_(n,id,o){const s=sheet_(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');const keys=Object.keys(o),cols=keys.map(k=>{const col=SCHEMA[n].indexOf(k);if(col<0)throw Error('Unknown field');return col;});if(keys.length===1){s.getRange(i+1,cols[0]+1).setValue(safe_(o[keys[0]]));}else if(keys.length>1){const row=v[i].slice(0,SCHEMA[n].length);while(row.length<SCHEMA[n].length)row.push('');keys.forEach((k,idx)=>{row[cols[idx]]=safe_(o[k]);});s.getRange(i+1,1,1,SCHEMA[n].length).setValues([row]);}const cached=TABLE_CACHE_[n]&&TABLE_CACHE_[n].find(x=>x[SCHEMA[n][0]]===id);if(cached)Object.assign(cached,o);else delete TABLE_CACHE_[n];}
+function delete_(n,id){delete TABLE_CACHE_[n];const s=sheet_(n),v=s.getDataRange().getValues(),i=v.findIndex((r,j)=>j>0&&r[0]===id);if(i<1)throw Error('Record not found');s.deleteRow(i+1);}
 function uid_(){return Utilities.getUuid();}
 function now_(){return new Date().toISOString();}
 function user_(){

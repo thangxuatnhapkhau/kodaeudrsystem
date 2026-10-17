@@ -87,7 +87,7 @@ Object.assign(translations.vi,{
  'Organize document groups':'Tự phân nhóm chứng từ','Organizing':'Đang phân nhóm','draft document groups saved':'nhóm chứng từ nháp đã lưu','uncertain groups need review':'nhóm chưa chắc chắn cần kiểm tra','Proposed supply chain':'Chuỗi cung ứng AI đề xuất','cited transactions':'giao dịch có trích dẫn','Review each branch before saving.':'Kiểm tra từng nhánh trước khi lưu.','Review and create supply chain':'Kiểm tra và tạo chuỗi cung ứng','Review proposed supply chain':'Kiểm tra chuỗi AI đề xuất','Supplier transactions':'Giao dịch giữa các supplier','I checked these suppliers and transactions against the original PDFs. Create draft links for this material and source.':'Tôi đã đối chiếu supplier và giao dịch với PDF gốc. Tạo liên kết nháp cho vật liệu và nguồn này.','Create draft supply chain':'Tạo chuỗi cung ứng nháp','Draft supply chain saved. Verify lot, quantities, origin and GEO.':'Đã lưu chuỗi nháp. Cần kiểm tra lô, số lượng, nguồn gốc và GEO.',
  'Review proposed document groups':'Xem nhóm chứng từ AI đề xuất','Classify pages manually':'Phân loại trang thủ công','AI suggests page ranges and document types. Check the original PDF before confirming draft copies.':'AI đề xuất khoảng trang và loại chứng từ. Đối chiếu PDF gốc trước khi xác nhận tạo bản nháp.','I checked the original PDF pages and confirm the selected ranges and evidence blocks.':'Tôi đã đối chiếu PDF gốc và xác nhận khoảng trang, nhóm chứng từ được chọn.','Create selected draft PDFs':'Tạo PDF nháp đã chọn','Unselected or uncertain pages remain in the original PDF for manual review.':'Trang chưa chọn hoặc chưa chắc chắn vẫn nằm trong PDF gốc để kiểm tra thêm.','Unreadable pages need manual review.':'Trang khó đọc cần kiểm tra thủ công.','Draft already saved':'Đã lưu bản nháp','Select and confirm at least one proposed section.':'Chọn và xác nhận ít nhất một nhóm chứng từ đề xuất.','Uncertain pages require manual classification.':'Trang chưa chắc chắn cần phân loại thủ công.'
 });
-let language=localStorage.getItem('eudr_language')||(/^vi\b/i.test(navigator.language)?'vi':'en');
+let language=localStorage.getItem('eudr_language')||'en';
 if(!['en','vi'].includes(language))language='en';
 const originalText=new WeakMap();
 function t(key,variables={}){let value=language==='vi'&&v27Vietnamese.has(key)?key:translations[language][key]||translations.en[key]||key;return value.replace(/\{(\w+)\}/g,(_,k)=>String(variables[k]??''));}
@@ -509,3 +509,35 @@ Object.assign(translations.vi,{
 
 // v2.9.4 geolocation labels.
 Object.assign(translations.vi,{"Export GeoJSON": "Xuất GeoJSON", "Commodity production country (ISO code)": "Quốc gia khai thác / sản xuất nguyên liệu (mã ISO)", "Source precision (decimal digits, 6–12)": "Độ chính xác nguồn (6–12 chữ số thập phân)", "Exact Plot ID": "Mã lô chính xác", "Production date / range": "Ngày / khoảng thời gian khai thác", "Plot area (ha)": "Diện tích lô (ha)", "Plot relationship": "Quan hệ lô trong chuỗi cung ứng", "Validate & Register": "Kiểm tra & đăng ký lô", "Notes": "Ghi chú", "Source document": "Chứng từ nguồn", "Review GEO": "Kiểm tra tọa độ lô", "Shorten notes to leave room for the boundary confirmation.": "Rút ngắn ghi chú để lưu thêm xác nhận ranh giới lô."});
+
+// v2.9.5 enterprise UX, regulatory registry, PDF zoom & calendar governance labels.
+Object.assign(translations.vi,{
+ "Regulatory Rule Registry (3-Tier Hierarchy)":"Danh mục Quy tắc Pháp lý & Chính sách (Phân cấp 3 tầng)",
+ "Tier 1: EU Official Regulation (2023/1115 & 2025/2650) · Tier 2: Customer Requirements · Tier 3: KODA Internal SOPs.":"Tầng 1: Quy định chính thức của EU (2023/1115 & 2025/2650) · Tầng 2: Yêu cầu riêng của Khách hàng · Tầng 3: Quy trình nội bộ KODA.",
+ "Rule Code":"Mã quy tắc",
+ "Tier / Type":"Tầng / Phân loại",
+ "Customer":"Khách hàng",
+ "Summary":"Tóm tắt nội dung",
+ "Effective Date":"Ngày hiệu lực",
+ "Status":"Trạng thái",
+ "Register / Update Regulation or Policy Rule":"Đăng ký / Cập nhật Quy tắc Pháp lý hoặc Chính sách",
+ "LEGAL_REQUIREMENT (Tier 1 — EU Law)":"LEGAL_REQUIREMENT (Tầng 1 — Luật EU)",
+ "CUSTOMER_REQUIREMENT (Tier 2 — Customer SOP)":"CUSTOMER_REQUIREMENT (Tầng 2 — Yêu cầu khách hàng)",
+ "KODA_INTERNAL_POLICY (Tier 3 — Internal Policy)":"KODA_INTERNAL_POLICY (Tầng 3 — Chính sách nội bộ KODA)",
+ "Rule summary & citation":"Tóm tắt quy tắc & trích dẫn điều khoản",
+ "Save Rule":"Lưu quy tắc",
+ "Rule saved to 43_REGULATION_RULES.":"Đã lưu quy tắc vào bảng 43_REGULATION_RULES.",
+ "Country Risk Classification":"Phân loại rủi ro quốc gia",
+ "ISO Country":"Mã quốc gia ISO",
+ "Risk Tier":"Mức độ rủi ro",
+ "Rule Version":"Phiên bản quy tắc",
+ "Zoom out PDF":"Thu nhỏ PDF",
+ "Zoom in PDF":"Phóng to PDF",
+ "Reset PDF zoom":"Đặt lại tỷ lệ PDF",
+ "SHA-256 verified":"Đã xác thực SHA-256",
+ "Calendar sync mode":"Chế độ đồng bộ Lịch",
+ "Reminders":"Nhắc lịch",
+ "Synced events":"Sự kiện đã đồng bộ",
+ "Manual sync required":"Cần đồng bộ thủ công"
+});
+
