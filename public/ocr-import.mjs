@@ -32,11 +32,11 @@ export async function readPDF(file,{signal,progress=()=>{},maxPages=300,maxChars
 export function category(name){
  const value=String(name||'').normalize('NFKC').replace(/\bS0LID\b/gi,'SOLID');
  const species=/\b(?:OAK|WALNUT|ASH|BEECH|ACACIA|RUBBER[\s-]*WOOD)\b|GỖ/i.test(value);
- const laminatedVeneerLumber=/LAMINATED\s+VENEER\s+LUMBER/i.test(value);
- const engineered={MDF:/\bMDF\b/i.test(value),PLYWOOD:/\bPLY[\s-]*WOOD\b/i.test(value),LVL:/\bLVL\b/i.test(value)||laminatedVeneerLumber,VENEER:/\bVENEER\b/i.test(value)&&!laminatedVeneerLumber};
+ const laminatedVeneerLumber=/LAMINATED\s+VENEER\s+LUMBER|\bLVL\b/i.test(value);
+ const engineered={MDF:/\bMDF\b/i.test(value),PLYWOOD:/\bPLY[\s-]*WOOD\b/i.test(value),VENEER:/\bVENEER\b/i.test(value)&&!laminatedVeneerLumber};
  const solid=/\bSOLID\b|GỖ\s*(?:TỰ NHIÊN|ĐẶC)/i.test(value)&&species;
  const nonwood=/\b(?:METAL|FABRIC|LEATHER|FELT|FOAM|STEEL|ALUMINI?UM|PLASTIC|GLASS)\b|VẢI|KIM LOẠI/i.test(value);
- const wood=species||solid||Object.values(engineered).some(Boolean)||/\b(?:WOOD|TIMBER)\b/i.test(value);
+ const wood=species||solid||laminatedVeneerLumber||Object.values(engineered).some(Boolean)||/\b(?:WOOD|TIMBER)\b/i.test(value);
  if(wood&&nonwood)return 'UNKNOWN';
  const types=Object.entries(engineered).filter(([,present])=>present).map(([type])=>type);
  if(solid)types.push('SOLID_WOOD');

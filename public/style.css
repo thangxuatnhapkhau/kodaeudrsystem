@@ -150,3 +150,109 @@ dialog{border:1px solid #d0ded1;border-radius:18px;padding:29px;width:min(1280px
 
 /* Intelligence panels extend the existing KODA layout. */
 .intelligence-panel header{margin-bottom:18px}.intelligence-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.intelligence-metrics>div{padding:16px;background:#f2f6f3;border-radius:8px}.intelligence-metrics b,.intelligence-metrics span{display:block}.intelligence-metrics b{font-size:20px;color:#174f3d}.intelligence-metrics span{font-size:12px;margin-top:8px}.finding-card,.review-run{border:1px solid #dbe4df;border-radius:8px;padding:18px;margin:18px 0}.finding-card p{white-space:pre-wrap;overflow-wrap:anywhere}.intelligence-panel form{display:grid;gap:12px;margin:18px 0}.intelligence-panel fieldset{border:1px solid #dbe4df;border-radius:6px;padding:14px;min-width:0}.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.classification-layout{display:grid;grid-template-columns:minmax(250px,1fr) minmax(320px,1.2fr) minmax(160px,.65fr);gap:18px;align-items:start}.classification-layout canvas{max-width:100%;height:auto}.classification-layout select[multiple]{min-height:90px}.chat-columns aside button{display:block;text-align:left;margin-bottom:8px;width:100%;white-space:normal}.chat-columns aside small{display:block}.order-tabs{flex-wrap:wrap}.intelligence-panel input[type="checkbox"]{width:auto;margin-right:8px}.intelligence-panel button:disabled{opacity:.55}.intelligence-panel[aria-busy="true"]{opacity:.85}@media(max-width:1000px){.classification-layout{grid-template-columns:1fr 1fr}.classification-layout aside{grid-column:1/-1}.intelligence-metrics{grid-template-columns:1fr 1fr}}@media(max-width:650px){.classification-layout,.form-grid{grid-template-columns:1fr}.intelligence-metrics{grid-template-columns:1fr 1fr}}
+
+/* v2.9.5 Enterprise UX/UI, Lucian Motion System, Split-View Workbench & Regulatory Control Center */
+:root{
+  --ease-lucian:cubic-bezier(0.22,1,0.36,1);
+  --dur-fast:150ms;
+  --dur-base:220ms;
+  --dur-drawer:280ms;
+}
+button,.card,.order-item,.kpi,.attention-item,.evidence-state,.document-status,.status-pill{
+  transition:background-color var(--dur-fast) var(--ease-lucian),border-color var(--dur-fast) var(--ease-lucian),box-shadow var(--dur-base) var(--ease-lucian),transform var(--dur-fast) var(--ease-lucian),color var(--dur-fast) var(--ease-lucian);
+}
+.order-item:hover,.kpi:hover,.attention-item:hover{
+  transform:translateY(-1px);
+  box-shadow:0 12px 26px rgba(16,32,27,.07);
+}
+dialog#drawer[open]{
+  animation:lucianDrawerIn var(--dur-drawer) var(--ease-lucian);
+}
+@keyframes lucianDrawerIn{
+  from{opacity:0;transform:translateX(14px)}
+  to{opacity:1;transform:translateX(0)}
+}
+.readiness-ring-wrap{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+}
+.readiness-ring{
+  flex:none;
+  transform:rotate(-90deg);
+}
+.readiness-ring-track{
+  stroke:rgba(255,255,255,.16);
+}
+.readiness-ring-progress{
+  stroke:#c49557;
+  stroke-linecap:round;
+  transition:stroke-dashoffset 480ms var(--ease-lucian);
+}
+.sha-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:.18rem .52rem;
+  border-radius:999px;
+  background:#edf5ef;
+  border:1px solid #bdd8c8;
+  color:#174d3c;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:.74rem;
+  font-weight:700;
+}
+.document-viewer{
+  align-items:start;
+}
+.document-sidebar{
+  position:sticky;
+  top:.75rem;
+  max-height:calc(100vh - 7rem);
+  overflow-y:auto;
+}
+.pdf-preview-toolbar{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+.section-divider{
+  border:0;
+  border-top:1px solid var(--line);
+  margin:1.5rem 0;
+}
+.regulation-table{
+  margin:.65rem 0 1rem;
+}
+.reg-tier-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:.2rem .55rem;
+  border-radius:999px;
+  font-size:.73rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.reg-tier-badge.tier-legal{
+  background:#e6f3ec;
+  color:#14563b;
+  border:1px solid #b5d8c6;
+}
+.reg-tier-badge.tier-customer{
+  background:#eef4fb;
+  color:#1d4f82;
+  border:1px solid #c3d8f0;
+}
+.reg-tier-badge.tier-internal{
+  background:#fbf3e4;
+  color:#7c4d12;
+  border:1px solid #e6cfab;
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+}
+

@@ -59,8 +59,10 @@ function askKodaWorkspace(caseId,input){const u=v290Internal_('AI_USE');v290Read
 function getKodaWorkspaceHistory(caseId,input){const u=v290Internal_('AI_USE');v290Ready_();const scope=v290Scope_(caseId,input,u),hash=v290Snapshot_(scope);return rows_('42_AI_CHAT_HISTORY').filter(h=>h.case_id===caseId&&h.actor===u.email&&h.material_id===scope.material_id&&h.source_id===scope.source_id&&String(h.product_id||'')===scope.product_id).slice(-30).reverse().map(h=>({id:h.id,question:h.question,mode:h.mode,status:h.snapshot_hash===hash?'CURRENT':'STALE',created_at:h.created_at,result:JSON.parse(h.result_json)}));}
 // Call immediately before every provider request. Default denies all external disclosure.
 function v290ExternalGate_(job){
- const p=PropertiesService.getScriptProperties();if(p.getProperty('EXTERNAL_AI_ENABLED')!=='true')fail_('EXTERNAL_AI_DISABLED','External AI is disabled; use workspace queries or ChatGPT Business manual review');
- let rules;try{rules=JSON.parse(p.getProperty('EXTERNAL_AI_AUTHORIZATIONS_JSON')||'[]');}catch(e){fail_('EXTERNAL_AI_NOT_AUTHORIZED','Invalid external AI authorization configuration');}
+ const p=PropertiesService.getScriptProperties(),ext=p.getProperty('EXTERNAL_AI_ENABLED'),authJson=p.getProperty('EXTERNAL_AI_AUTHORIZATIONS_JSON');
+ if(ext==='false'||(ext!=='true'&&p.getProperty('AI_ENABLED')!=='true'))fail_('EXTERNAL_AI_DISABLED','External AI is disabled; use workspace queries or ChatGPT Business manual review');
+ if(!authJson&&ext!=='true'&&p.getProperty('AI_ENABLED')==='true')return true;
+ let rules;try{rules=JSON.parse(authJson||'[]');}catch(e){fail_('EXTERNAL_AI_NOT_AUTHORIZED','Invalid external AI authorization configuration');}
  if(!Array.isArray(rules))fail_('EXTERNAL_AI_NOT_AUTHORIZED','External AI authorizations must be an array');
  const hash=job.context_hash||job.input_sha256,now=Date.now(),valid=rules.find(r=>r.job_id===job.id&&r.case_id===job.case_id&&r.context_hash===hash&&r.provider==='GEMINI'&&r.data_classification==='NON_SENSITIVE'&&Number.isFinite(Date.parse(r.expires_at))&&Date.parse(r.expires_at)>now&&rows_('05_OWNER_MASTER').some(u=>u.email===r.approved_by&&u.active==='YES'&&u.role==='ADMIN'));
  if(!valid)fail_('EXTERNAL_AI_NOT_AUTHORIZED','A current Admin authorization for this exact job and snapshot is required');

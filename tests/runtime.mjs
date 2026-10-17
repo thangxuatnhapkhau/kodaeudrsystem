@@ -1,7 +1,7 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {createHash,createHmac,randomUUID} from 'node:crypto';const root=new URL('../',import.meta.url);
 export function runtime(){
  const ctx={console,Date};vm.createContext(ctx);
- for(const file of ['Code.gs','Migration.gs','AuthService.gs','OrderService.gs','CalendarService.gs','DocumentService.gs','GeoService.gs','PromptService.gs','ExportService.gs','WorkspaceService.gs','MetadataService.gs','TransferService.gs','DossierService.gs','SmartImportService.gs','AIService.gs','TraceService.gs','MaterialReviewService.gs','Bridge.gs'])vm.runInContext(fs.readFileSync(new URL('apps_script/'+file,root),'utf8'),ctx,{filename:file});
+ for(const file of ['Code.gs','Migration.gs','V290Migration.gs','AuthService.gs','OrderService.gs','CalendarService.gs','DocumentService.gs','GeoService.gs','PromptService.gs','ExportService.gs','WorkspaceService.gs','MetadataService.gs','TransferService.gs','DossierService.gs','SmartImportService.gs','AIService.gs','TraceService.gs','MaterialReviewService.gs','ClassificationService.gs','IssueService.gs','ReviewBridgeService.gs','CustomerSubmissionService.gs','IntelligencePolicyService.gs','IntelligenceService.gs','WorkspaceChatService.gs','Bridge.gs'])vm.runInContext(fs.readFileSync(new URL('apps_script/'+file,root),'utf8'),ctx,{filename:file});
  const tables={};for(const name of Object.keys(vm.runInContext('SCHEMA',ctx)))tables[name]=[];
  const clone=o=>JSON.parse(JSON.stringify(o));
  ctx.rows_=n=>clone(tables[n]||[]);ctx.add_=(n,o)=>{const schema=vm.runInContext('SCHEMA',ctx)[n];tables[n].push(Object.fromEntries(schema.map(k=>[k,o[k]??''])));};
