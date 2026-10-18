@@ -664,6 +664,12 @@ Object.assign(translations.vi,{
  "Registering plot…":"Đang đăng ký lô rừng…",
  "Saving review…":"Đang lưu thẩm định…",
  "Exporting GeoJSON…":"Đang xuất GeoJSON…",
- "GeoJSON exported.":"Đã xuất tệp GeoJSON."
+ "GeoJSON exported.":"Đã xuất tệp GeoJSON.",
+ "+ Auto-create Plot relationship from Plot ID":"+ Tự động tạo quan hệ Lô khai thác (Plot) từ Mã lô (Plot ID)",
+ "No Plot, Producer or Forest owner relationship exists yet. Saving will automatically create a Plot relationship from the Plot ID below, or you can create one now.":"Chưa có quan hệ Plot, Producer hoặc Forest owner cho vật liệu này. Khi lưu hệ thống sẽ tự tạo quan hệ Plot từ Plot ID bên dưới, hoặc bạn có thể tạo ngay.",
+ "+ Create Plot relationship now":"+ Tạo quan hệ Plot ngay",
+ "Creating Plot relationship…":"Đang tạo quan hệ Plot…",
+ "Plot relationship created.":"Đã tạo quan hệ Plot."
 });
+
 

@@ -108,6 +108,10 @@
 .geo-boundary-step strong{font-size:13px;color:#0b2923}
 .geo-boundary-step small{font-size:12px;color:#52645d}
 
+.geo-workspace form,.geo-register-form{max-width:100%;width:100%;box-sizing:border-box}
+.geo-missing-node-box{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0 12px;padding:10px 14px;border-radius:10px;background:#f4f8f5;border:1px solid #c5d5cc}
+.geo-missing-node-box p{margin:0;flex:1 1 260px}
+.geo-missing-node-box button{margin:0}
 .geo-workspace input,.geo-workspace select,.geo-workspace textarea{max-width:100%;box-sizing:border-box}
 .geo-workspace .card{min-width:0}
 .geo-entry{margin-top:14px;padding:14px;border:1px solid #cbdcd0;border-radius:10px;background:#f3f8f2}

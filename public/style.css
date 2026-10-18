@@ -497,7 +497,19 @@ dialog::backdrop{
 
 /* P2 — UX, Navigation, Categorized Sidebar, Dashboard KPIs & Operation Status Center */
 .sidebar{
+  overflow-x:hidden;
+  overflow-y:auto;
   transition:width .22s cubic-bezier(.22,1,.36,1),padding .22s cubic-bezier(.22,1,.36,1),transform .24s cubic-bezier(.22,1,.36,1);
+}
+.brand{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:.65rem;
+}
+.brand-main{
+  min-width:0;
+  flex:1;
 }
 .sidebar-header-row{
   display:flex;
@@ -508,17 +520,18 @@ dialog::backdrop{
 .sidebar-collapse-btn{
   background:rgba(255,255,255,.08);
   color:#d9eee5;
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:6px;
-  padding:.25rem .45rem;
-  font-size:.78rem;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;
+  padding:.32rem .5rem;
+  font-size:.82rem;
   line-height:1;
-  min-width:28px;
-  min-height:28px;
+  min-width:30px;
+  min-height:30px;
   flex-shrink:0;
+  margin-top:2px;
 }
 .sidebar-collapse-btn:hover{
-  background:rgba(255,255,255,.16);
+  background:rgba(255,255,255,.18);
   color:#fff;
 }
 .nav-group{
@@ -540,6 +553,7 @@ dialog::backdrop{
   gap:.55rem;
   width:100%;
   text-align:left;
+  overflow:hidden;
   transition:background-color .16s ease,color .16s ease,transform .16s ease;
 }
 #nav button .nav-icon{
@@ -616,29 +630,52 @@ dialog::backdrop{
 }
 .app-shell.sidebar-collapsed .sidebar,
 .shell.sidebar-collapsed .sidebar{
-  padding:.85rem .45rem;
+  width:72px;
+  padding:18px 8px;
+  align-items:center;
+  overflow-x:hidden;
 }
+.app-shell.sidebar-collapsed .brand-main,
 .app-shell.sidebar-collapsed .brand-caption,
 .app-shell.sidebar-collapsed .sidebar-section,
+.app-shell.sidebar-collapsed .nav-group-label,
+.app-shell.sidebar-collapsed #nav button .nav-label,
 .app-shell.sidebar-collapsed .sidebar-order-context,
-.app-shell.sidebar-collapsed .sidebar-footer p,
+.app-shell.sidebar-collapsed .sidebar-footer,
+.app-shell.sidebar-collapsed .pilot-mark,
 .shell.sidebar-collapsed .brand-title,
 .shell.sidebar-collapsed .brand-subtitle,
 .shell.sidebar-collapsed .nav-group-label,
 .shell.sidebar-collapsed #nav button .nav-label,
 .shell.sidebar-collapsed .sidebar-order-context,
 .shell.sidebar-collapsed .pilot-mark{
-  display:none;
+  display:none!important;
 }
 .app-shell.sidebar-collapsed .brand{
-  flex-direction:column;
+  width:100%;
+  padding:0 0 16px;
+  justify-content:center;
   align-items:center;
+}
+.app-shell.sidebar-collapsed #nav,
+.app-shell.sidebar-collapsed .nav-group{
+  width:100%;
+  justify-items:center;
 }
 .app-shell.sidebar-collapsed #nav button,
 .shell.sidebar-collapsed #nav button{
   justify-content:center;
-  padding:.58rem .35rem;
-  font-size:.74rem;
+  width:50px;
+  height:40px;
+  padding:0 4px;
+  font-size:.72rem;
+  gap:4px;
+}
+.app-shell.sidebar-collapsed #nav button::after{
+  content:attr(data-short);
+  font-size:10.5px;
+  font-weight:800;
+  letter-spacing:.03em;
 }
 .mobile-menu-btn{
   display:none;
