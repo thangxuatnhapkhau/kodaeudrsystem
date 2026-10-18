@@ -354,11 +354,19 @@ test('SIDE-01..SIDE-06: Categorized sidebar, role-based visibility, desktop coll
   const groupLabels = [...document.querySelectorAll('#nav .sidebar-section')].map(el => el.textContent.trim());
   assert.deepEqual(groupLabels, ['OPERATIONS', 'EUDR MANAGEMENT', 'ADMINISTRATION']);
 
-  // SIDE-02: Desktop collapse / expand
+  // SIDE-02: Desktop collapse / expand + nav-label & data-short structure for collapsed icon rail
   const collapseBtn = document.getElementById('sidebarCollapseBtn');
   const shell = document.getElementById('appShell');
   assert.ok(collapseBtn);
   assert.equal(shell.classList.contains('sidebar-collapsed'), false);
+  const navButtons = [...document.querySelectorAll('#nav button[data-view]')];
+  assert.ok(navButtons.length >= 8);
+  for (const btn of navButtons) {
+    assert.ok(btn.querySelector('.nav-label'), `Button ${btn.dataset.view} must wrap text in .nav-label for collapsed state`);
+    assert.ok(btn.dataset.short && btn.dataset.short.length === 2, `Button ${btn.dataset.view} must provide 2-char data-short code`);
+  }
+  const styleCss = fs.readFileSync('public/style.css', 'utf8');
+  assert.match(styleCss, /\.app-shell\.sidebar-collapsed #nav button \.nav-label[^{]*\{\s*display:\s*none!important;?\s*\}/);
   collapseBtn.click();
   assert.equal(shell.classList.contains('sidebar-collapsed'), true);
   collapseBtn.click();

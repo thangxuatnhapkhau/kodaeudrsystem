@@ -2,7 +2,7 @@
   "package": "KODA_EUDR_P2E_GEOLOCATION_WORKSPACE_UPGRADE",
   "branch": "feature/eudr-p2e-geolocation",
   "baseline_commit": "529aa4b13526a404f439df8ec64af1f437cbfd60",
-  "generated_at": "2026-10-18T04:33:23.838Z",
+  "generated_at": "2026-10-18T05:32:05.075Z",
   "total_files": 664,
   "files": [
     {
@@ -557,63 +557,63 @@
     },
     {
       "path": "docs/p2e/P2E_ARCHITECTURE.md",
-      "bytes": 4272,
-      "sha256": "b7c2d9e6145cd9b219a28548a6c73e4dec1055a5aa7b248ed3548cabfbb7469f"
+      "bytes": 4331,
+      "sha256": "f6feb00f84b7d5b02ae9d211e7da20a2a0aeb46d8cd23146f76d87c65a886ba9"
     },
     {
       "path": "docs/p2e/P2E_BASELINE_AUDIT.md",
-      "bytes": 5522,
-      "sha256": "79b4b068530d6363a5d4dc30b10bd2e4541c2d3cf7cfbe6a8e3bdcbd83330396"
+      "bytes": 5583,
+      "sha256": "3f31eba9d8acfdd5d36475c833eb9bc37740d0ea211b7af2e5bc6ea02f75fd81"
     },
     {
       "path": "docs/p2e/P2E_DATA_INTEGRITY_REVIEW.md",
-      "bytes": 2874,
-      "sha256": "0ee3b8a91be8650e78f5329cd42247dfe18a2b3551a7879747b07d15f4b5ab7c"
+      "bytes": 2905,
+      "sha256": "5eb2188679da78070144517cf2c6563f01df6e69a722d16b3228156c303f92ce"
     },
     {
       "path": "docs/p2e/P2E_DEPLOYMENT_GUIDE.md",
-      "bytes": 2005,
-      "sha256": "6c602c56d9378cd9e4f6ed246490588209f53d1c528487c66ef7b123dd65494c"
+      "bytes": 2053,
+      "sha256": "d4df4f3093501edca1257d34dd70b91c03d82e1838b0a7644dce651c08bf6938"
     },
     {
       "path": "docs/p2e/P2E_GEOLOCATION_WORKFLOW.md",
-      "bytes": 5206,
-      "sha256": "52eca1804bf3b091ab453483674c69a9e97d8c62f633444ca2071872ef3ebf78"
+      "bytes": 5267,
+      "sha256": "de034abab5cb846bb75528b51bfff7f568ad64a7e59d854ada76f4d00d9f8751"
     },
     {
       "path": "docs/p2e/P2E_INTEGRATION_GUIDE.md",
-      "bytes": 2746,
-      "sha256": "10dd11e4847917acae26e096cd99d8d6b02f998e22df890731e94b39b2d72667"
+      "bytes": 2791,
+      "sha256": "36a2baad9baec2d5421dba6cfcde82a2272d370ad0b15a02cf536af3a0687796"
     },
     {
       "path": "docs/p2e/P2E_RELEASE_NOTES.md",
-      "bytes": 3584,
-      "sha256": "22bf0db54d6d5129bea546b9790e3cb612fced602790f35a28632f0a48f70bd2"
+      "bytes": 3622,
+      "sha256": "90d4fae8c9fb58b9d9b22e4ba0994c1366596351428e9b4e20a5d7a366d4de6c"
     },
     {
       "path": "docs/p2e/P2E_ROLLBACK_RUNBOOK.md",
-      "bytes": 2113,
-      "sha256": "22b3b24a9797fb3b13b9da9118c2caf54a12f733b42162d8976fa5a95d286c9a"
+      "bytes": 2151,
+      "sha256": "b19d105857acf8897c837aa181a7809bf7e4c386a43680dc51c12f44619fb32f"
     },
     {
       "path": "docs/p2e/P2E_SECURITY_REVIEW.md",
-      "bytes": 2453,
-      "sha256": "4ee595eab1773e21a6d9b03dd667dc5f75ee61eaa4f5318e7efa4f9c6ec5b0a4"
+      "bytes": 2479,
+      "sha256": "47178a597c986bdab6229cfb28d6f3eb6bc2cad91f1a992744fcf7c13ce25530"
     },
     {
       "path": "docs/p2e/P2E_TEST_RESULTS.md",
-      "bytes": 8397,
-      "sha256": "1f642644aaaa6918946e5e9abdf28c7eeae2396153134660dd62b536606e4207"
+      "bytes": 8492,
+      "sha256": "e494434073301d00e8efbbae3643ba1e569a3ef8198536a054dd5bb9a5aeab60"
     },
     {
       "path": "docs/p2e/P2E_UAT_CHECKLIST.md",
-      "bytes": 5588,
-      "sha256": "c3ceb8eb448dee6ce717965157f1b57ef38c091f49fa8437a6450763a1c27508"
+      "bytes": 5652,
+      "sha256": "6782c661185a6d22cbee7284ec313ae29a46a2686df5dce63ec85ed61330c488"
     },
     {
       "path": "docs/p2e/P2E_UI_CHANGELOG.md",
-      "bytes": 2862,
-      "sha256": "cb9175717caa981b590dfaa8bbbcaa04abfacfb0ec4988f6dbf72c0ac98fc941"
+      "bytes": 2879,
+      "sha256": "3adbd002519f7bce52a7ec0eac8297caf70d427b57636971081b822bd56000cb"
     },
     {
       "path": "docs/upgrade/00_SYSTEM_AUDIT.md",
@@ -1207,8 +1207,8 @@
     },
     {
       "path": "public/app.js",
-      "bytes": 156746,
-      "sha256": "33401a514f63183c3fd64b1c609657858e5a4bf1ca8b69481e66364acdcf0adf"
+      "bytes": 158097,
+      "sha256": "6dc47bfad98162df5c37caa74d2604db5ae70db2e11772aaeac12040fcc3f4ef"
     },
     {
       "path": "public/dossier.js",
@@ -1222,18 +1222,18 @@
     },
     {
       "path": "public/geo.css",
-      "bytes": 8859,
-      "sha256": "27406491f1bcfdca019ca421fdbd627f30db210caa011158d19cc2e8b19111b0"
+      "bytes": 9371,
+      "sha256": "9af2cf99a96f0c6429e121133b6420d873e500d6552ac33c85f3d42f750c0b11"
     },
     {
       "path": "public/geo.js",
-      "bytes": 63630,
-      "sha256": "9e42349cd18369b39ca3f6a683233d427aad200e729822ae42a8c2b95525bc1c"
+      "bytes": 69604,
+      "sha256": "10b82a6ea5343b99a5534e6261a5a3e4dd02d7b95f192c246e33a8017970b9ee"
     },
     {
       "path": "public/i18n.js",
-      "bytes": 99742,
-      "sha256": "27b81ff6d7b371db5508bc0bf53f60ea962c3818cc0d094a469b587b2b7232c9"
+      "bytes": 101098,
+      "sha256": "49770c0a0d9812b93fdbd38295bd4329b2e49354f7dfcca145a6b0e2510daa18"
     },
     {
       "path": "public/index.html",
@@ -1277,8 +1277,8 @@
     },
     {
       "path": "public/style.css",
-      "bytes": 61938,
-      "sha256": "9ccd6cbcd1421da913f201513f0b219318a7973aabc627e0795c8e6f27a1a224"
+      "bytes": 62722,
+      "sha256": "8ebd9bb1ab71d1987a12bbf2eacf5340587825e7318384888f58c7d2b091293a"
     },
     {
       "path": "public/templates/KODA_Order_Import_Template.xlsx",
@@ -2912,13 +2912,13 @@
     },
     {
       "path": "tests/p2-ux-navigation.test.mjs",
-      "bytes": 23024,
-      "sha256": "53c613a2d22f306b2cdec6c4414c1aa619dbbb77cc075169367fb27e9b1c5e33"
+      "bytes": 23688,
+      "sha256": "73b4bf314e05899387f8e57fe4900545c684a6493154f5ce3a1440c4be4a95ee"
     },
     {
       "path": "tests/p2e-geolocation.test.mjs",
-      "bytes": 45376,
-      "sha256": "2de877bad1afa1164f027fa9fbf3b01b222c14984bc79434245249cd447346a4"
+      "bytes": 48673,
+      "sha256": "c6e29ae4e85849e7410dc232ebeaa950e5636e5f92f5b9a6ab032f0be7307be3"
     },
     {
       "path": "tests/removal-v2414.test.mjs",

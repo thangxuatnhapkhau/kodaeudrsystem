@@ -165,9 +165,11 @@ window.EudrGeo=(()=>{
   const resolvedChainNodeId=chainNodeId||nav?.captureState?.()?.chainNodeId||'';
   const activeChainNode=(state.chain||[]).find(n=>n.id===resolvedChainNodeId&&n.material_id===materialId);
 
-  const has=c=>(state.user.capabilities||[]).includes(c),canEdit=has('GEO_EDIT'),canUpload=has('EVIDENCE_UPLOAD'),canReview=has('GEO_REVIEW');
+  const has=c=>(state.user.capabilities||[]).includes(c),canEdit=has('GEO_EDIT'),canUpload=has('EVIDENCE_UPLOAD'),canReview=has('GEO_REVIEW'),canChainEdit=has('CHAIN_EDIT');
   const $=id=>document.getElementById(id);
-  const nodes=(state.chain||[]).filter(n=>n.material_id===materialId&&n.active!=='NO'&&['PLOT','PRODUCER','FOREST_OWNER'].includes(n.node_type));
+  const allChainNodes=(state.chain||[]).filter(n=>n.material_id===materialId&&n.active!=='NO');
+  const nodes=allChainNodes.filter(n=>['PLOT','PRODUCER','FOREST_OWNER'].includes(n.node_type));
+  const defaultParentNode=allChainNodes.find(n=>n.id===resolvedChainNodeId&&n.terminal!=='YES')||allChainNodes.filter(n=>n.terminal!=='YES').slice().sort((a,b)=>Number(b.tier||0)-Number(a.tier||0))[0]||null;
   const allMaterialRecords=(state.geo||[]).filter(g=>g.material_id===materialId);
   const records=allMaterialRecords;
   const stored=[],parsedByRecordIndex=new Map();
@@ -407,8 +409,8 @@ window.EudrGeo=(()=>{
       <span id="geoEligibilityBadge" class="geo-badge geo-badge--neutral">${esc(tr('Select or paste geometry'))}</span>
      </div>
      <p id="geoEligibilityBanner" class="geo-eligibility-banner muted">${esc(tr('Registration supports Point (plots up to 4 ha) or a single-ring Polygon (up to 2,000 positions).'))}</p>
-     <label>${esc(tr('Plot relationship'))}<select name="chain_node_id" required><option value="">${esc(tr('Select a plot / producer relationship'))}</option>${nodes.map(n=>`<option value="${esc(n.id)}" ${n.id===resolvedChainNodeId?'selected':''}>${esc(n.plot_id||n.display_name||n.id)} (${esc(n.node_type)})</option>`).join('')}</select></label>
-     ${!nodes.length?`<p id="geoMissingNodeWarn" class="warn" role="alert">${esc(tr('Add a Plot, Producer or Forest owner relationship in the supply chain before registering. You can still preview the file.'))}</p>`:''}
+     <label>${esc(tr('Plot relationship'))}<select name="chain_node_id" required><option value="">${esc(tr('Select a plot / producer relationship'))}</option>${nodes.map(n=>`<option value="${esc(n.id)}" ${(n.id===resolvedChainNodeId||(!resolvedChainNodeId&&nodes.length===1))?'selected':''}>${esc(n.plot_id||n.display_name||n.id)} (${esc(n.node_type)})</option>`).join('')}${canChainEdit?`<option value="__NEW_PLOT__" ${!nodes.length?'selected':''}>+ ${esc(tr('Auto-create Plot relationship from Plot ID'))}</option>`:''}</select></label>
+     ${!nodes.length?`<div id="geoMissingNodeWarn" class="warn geo-missing-node-box" role="alert"><span>${esc(tr(canChainEdit?'No Plot / Producer relationship exists yet for this material. Keep "+ Auto-create Plot relationship from Plot ID" selected to create it automatically on registration, or click below to create it now.':'Add a Plot, Producer or Forest owner relationship in the supply chain before registering. You can still preview the file.'))}</span>${canChainEdit?`<button type="button" id="geoQuickAddNodeBtn" class="quiet-button">+ ${esc(tr('Create Plot relationship now'))}</button>`:''}</div>`:''}
      <label>${esc(tr('Exact Plot ID'))}<input name="plot_id" required maxlength="150"></label>
      <div class="geo-fields">
       <label>${esc(tr('Commodity production country (ISO code)'))}<input name="country_of_production" required pattern="[A-Z]{2}" maxlength="2" placeholder="VN"></label>
@@ -689,7 +691,8 @@ window.EudrGeo=(()=>{
    updateEligibilityUI(f,g,valid,status);
    if(form){
     form.elements.geometry.value=g?JSON.stringify(g):'';
-    $('geoRegister').disabled=busy||!valid||!nodes.length;
+    const hasChainOption=nodes.length>0||canChainEdit;
+    $('geoRegister').disabled=busy||!valid||!hasChainOption;
    }
    const previewFeatures=g?[{...f,geometry:g,properties:{...f.properties,preview:true}}]:f?[{...f,properties:{...f.properties,preview:true}}]:stored;
    show(previewFeatures);
@@ -844,6 +847,11 @@ window.EudrGeo=(()=>{
      form.elements.chain_node_id.value=resolvedChainNodeId;
      const n=nodes.find(x=>x.id===resolvedChainNodeId);
      if(n?.node_type==='PLOT'&&n.plot_id)form.elements.plot_id.value=n.plot_id;
+    }else if(nodes.length===1){
+     form.elements.chain_node_id.value=nodes[0].id;
+     if(nodes[0]?.node_type==='PLOT'&&nodes[0].plot_id)form.elements.plot_id.value=nodes[0].plot_id;
+    }else if(!nodes.length&&canChainEdit){
+     form.elements.chain_node_id.value='__NEW_PLOT__';
     }else{
      form.elements.chain_node_id.value='';
     }
@@ -943,23 +951,67 @@ window.EudrGeo=(()=>{
     const n=nodes.find(n=>n.id===form.elements.chain_node_id.value);
     if(n?.node_type==='PLOT'&&n.plot_id)form.elements.plot_id.value=n.plot_id;
    };
-   $('geoPreviewText').onclick=()=>{
+   if($('geoQuickAddNodeBtn')){
+    $('geoQuickAddNodeBtn').onclick=async()=>{
+     if(busy)return;
+     const plotId=(form.elements.plot_id.value||features[Number($('geoFeature')?.value)||0]?.properties?.name||'Plot 1').trim().slice(0,150);
+     if(!form.elements.plot_id.value)form.elements.plot_id.value=plotId;
+     busy=true;
+     const btn=$('geoQuickAddNodeBtn');
+     const unlockBtn=ops?.lockButton?ops.lockButton(btn,'Creating relationship…'):()=>{};
+     const opId=ops?.start?ops.start({action:'addChainNode',label:`Creating Plot relationship (${plotId})`,level:3,caseId:m.case_id}):null;
+     try{
+      const created=await call('addChainNode',m.case_id,{
+       material_id:materialId,
+       parent_id:defaultParentNode?.id||'',
+       node_type:'PLOT',
+       display_name:plotId,
+       plot_id:plotId,
+       terminal:'YES',
+       source_document_id:form.elements.source_document_id.value||''
+      });
+      const newNode={id:created.id,case_id:m.case_id,material_id:materialId,parent_id:defaultParentNode?.id||'',node_type:'PLOT',display_name:plotId,plot_id:plotId,terminal:'YES',active:'YES'};
+      nodes.push(newNode);
+      if(state.chain)state.chain.push(newNode);
+      const opt=document.createElement('option');
+      opt.value=newNode.id;
+      opt.textContent=`${newNode.plot_id} (PLOT)`;
+      form.elements.chain_node_id.append(opt);
+      form.elements.chain_node_id.value=newNode.id;
+      if($('geoMissingNodeWarn'))$('geoMissingNodeWarn').hidden=true;
+      ops?.succeed?.(opId,tr('Plot relationship created.'));
+      message('Plot relationship created and selected.');
+      updateGeometry();
+     }catch(e){
+      ops?.fail?.(opId,e,{uncertain:e.status>=500});
+      message((e.code?e.code+' · ':'')+e.message);
+     }finally{
+      busy=false;
+      unlockBtn();
+     }
+    };
+   }
+   const applyGeometryTextarea=(showToast=false)=>{
     try{
-     const g=checkGeometry(JSON.parse(form.elements.geometry.value));
-     features=[{type:'Feature',geometry:g,properties:{name:form.elements.plot_id.value||'Plot',preview:true}}];
+     const rawText=form.elements.geometry.value.trim();
+     if(!rawText)throw Error(tr('Geometry is empty.'));
+     const parsedFeat=parse(rawText)[0];
+     const g=checkGeometry(candidate(parsedFeat,true)||parsedFeat.geometry);
+     features=[{type:'Feature',geometry:g,properties:{name:form.elements.plot_id.value||parsedFeat?.properties?.name||'Plot',preview:true}}];
      $('geoFeature').innerHTML='<option value="0">Geometry</option>';
      $('geoLineConfirm').checked=false;
      $('geoLineLabel').hidden=true;
      updateGeometry();
-     message('Geometry ready for review.');
+     if(showToast)message('Geometry ready for review.');
     }catch(e){
      $('geoRegister').disabled=true;
-     message(e.message);
+     if(showToast)message(e.message);
     }
    };
+   $('geoPreviewText').onclick=()=>applyGeometryTextarea(true);
    form.elements.geometry.oninput=()=>{
-    $('geoRegister').disabled=true;
     nav?.markDirty?.(true);
+    applyGeometryTextarea(false);
    };
    form.onsubmit=async event=>{
     event.preventDefault();
@@ -973,6 +1025,32 @@ window.EudrGeo=(()=>{
      const rawInput=Object.fromEntries(new FormData(form));
      const linkActiveSource=Boolean($('geoLinkActiveSource')?.checked&&activeSource);
      delete rawInput.link_active_source;
+     const needsAutoNode=canChainEdit&&(rawInput.chain_node_id==='__NEW_PLOT__' || (!rawInput.chain_node_id&&!nodes.length));
+     if(needsAutoNode){
+      const plotIdForNode=String(rawInput.plot_id||'').trim();
+      if(!plotIdForNode||plotIdForNode.length>150){
+       const err=Error(tr('Plot ID is required'));err.code='INVALID_GEO';throw err;
+      }
+      // Validate all other fields before creating the chain node
+      const tempNode={id:'__TEMP_PLOT__',node_type:'PLOT',plot_id:plotIdForNode,display_name:plotIdForNode};
+      validatePlotRegistration({...rawInput,chain_node_id:'__TEMP_PLOT__'},{nodes:[tempNode],records,docs:state.docs||[],caseId:m.case_id,materialId});
+      ops?.update?.(opId,{step:'Creating plot relationship in supply chain'});
+      const createdNode=await call('addChainNode',m.case_id,{
+       material_id:materialId,
+       parent_id:defaultParentNode?.id||'',
+       node_type:'PLOT',
+       display_name:plotIdForNode,
+       plot_id:plotIdForNode,
+       terminal:'YES',
+       source_document_id:rawInput.source_document_id||''
+      });
+      if(createdNode?.id){
+       const newNode={id:createdNode.id,case_id:m.case_id,material_id:materialId,parent_id:defaultParentNode?.id||'',node_type:'PLOT',display_name:plotIdForNode,plot_id:plotIdForNode,terminal:'YES',active:'YES'};
+       nodes.push(newNode);
+       if(state.chain)state.chain.push(newNode);
+       rawInput.chain_node_id=createdNode.id;
+      }
+     }
      const validated=validatePlotRegistration(rawInput,{nodes,records,docs:state.docs||[],caseId:m.case_id,materialId});
      validated.material_id=materialId;
      const feature=features[Number($('geoFeature').value)||0];

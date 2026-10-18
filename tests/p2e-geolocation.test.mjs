@@ -246,6 +246,25 @@ function bootGeoEnv(options = {}) {
       });
       return {ok: true, status: 200, json: async () => ({ok: true, data: {id: docId, version: 1}})};
     }
+    if (body.action === 'addChainNode') {
+      const [caseId, input] = body.args;
+      const nodeId = 'NODE-AUTO-' + apiCalls.length;
+      fixture.chain.push({
+        id: nodeId,
+        case_id: caseId,
+        material_id: input.material_id,
+        parent_id: input.parent_id || '',
+        supplier_id: input.supplier_id || '',
+        display_name: input.display_name || input.plot_id || 'Forest Plot',
+        tier: input.tier || 1,
+        node_type: input.node_type || 'PLOT',
+        plot_id: input.plot_id || '',
+        country_of_production: input.country_of_production || '',
+        production_range: input.production_range || '',
+        terminal: input.terminal || 'YES'
+      });
+      return {ok: true, status: 200, json: async () => ({ok: true, data: {id: nodeId}})};
+    }
     if (body.action === 'saveGeo') {
       const [caseId, input] = body.args;
       const geoId = 'GEO-SAVED-' + apiCalls.length;
@@ -680,12 +699,31 @@ test('GEO-R01..GEO-R12: Plot Registration rules, Point >4 ha rejection, polygon 
   await dupForm.onsubmit(new window.Event('submit', {bubbles: true, cancelable: true}));
   assert.match(document.getElementById('geoMessage').textContent, /DUPLICATE_PLOT/);
 
-  // GEO-R11: Attempt registration with missing Plot/Producer/Forest Owner node -> Registration blocked with clear guidance
-  const noNodesEnv = bootGeoEnv({chainNodes: []});
-  await noNodesEnv.window.__runApp(`geoDialog('MAT-WALNUT', {initialTab: 'register'})`);
-  assert.ok(noNodesEnv.document.getElementById('geoMissingNodeWarn'));
-  await selectMockFile(noNodesEnv.window, noNodesEnv.document, 'valid.geojson', pointJson);
-  assert.equal(noNodesEnv.document.getElementById('geoRegister').disabled, true);
+  // GEO-R11: Missing Plot/Producer/Forest Owner node -> Auto-creates Plot node when CHAIN_EDIT capability is present, and blocks registration when CHAIN_EDIT is absent
+  const autoNodeEnv = bootGeoEnv({chainNodes: []});
+  await autoNodeEnv.window.__runApp(`geoDialog('MAT-WALNUT', {initialTab: 'register'})`);
+  assert.ok(autoNodeEnv.document.getElementById('geoMissingNodeWarn'));
+  assert.ok(autoNodeEnv.document.getElementById('geoQuickAddNodeBtn'));
+  await selectMockFile(autoNodeEnv.window, autoNodeEnv.document, 'valid.geojson', pointJson);
+  assert.equal(autoNodeEnv.document.getElementById('geoRegister').disabled, false);
+  const autoForm = autoNodeEnv.document.getElementById('geoForm');
+  assert.equal(autoForm.elements.chain_node_id.value, '__NEW_PLOT__');
+  autoForm.elements.plot_id.value = 'PLOT-AUTO-01';
+  autoForm.elements.country_of_production.value = 'VN';
+  autoForm.elements.production_range.value = '2026-02-01 / 2026-03-01';
+  autoForm.elements.area_ha.value = '1.8';
+  autoForm.elements.coordinate_precision_digits.value = '6';
+  autoForm.elements.source_document_id.value = 'DOC-GEO-SRC';
+  await autoForm.onsubmit(new autoNodeEnv.window.Event('submit', {bubbles: true, cancelable: true}));
+  assert.ok(autoNodeEnv.apiCalls.some(c => c.action === 'addChainNode' && c.args[1].plot_id === 'PLOT-AUTO-01'));
+  assert.ok(autoNodeEnv.apiCalls.some(c => c.action === 'saveGeo' && c.args[1].plot_id === 'PLOT-AUTO-01'));
+  assert.equal(autoNodeEnv.document.getElementById('geoMessage').textContent, 'Plot registered · REVIEW_REQUIRED.');
+
+  const noNodesNoChainEditEnv = bootGeoEnv({chainNodes: [], capabilities: ['GEO_EDIT', 'EVIDENCE_UPLOAD']});
+  await noNodesNoChainEditEnv.window.__runApp(`geoDialog('MAT-WALNUT', {initialTab: 'register'})`);
+  assert.ok(noNodesNoChainEditEnv.document.getElementById('geoMissingNodeWarn'));
+  await selectMockFile(noNodesNoChainEditEnv.window, noNodesNoChainEditEnv.document, 'valid.geojson', pointJson);
+  assert.equal(noNodesNoChainEditEnv.document.getElementById('geoRegister').disabled, true);
 });
 
 test('GEO-V01..GEO-V06: Geolocation Verification decisions (VERIFIED, REJECTED, MORE_INFO_REQUIRED), mandatory notes, capability gating, source PDF navigation, and compliance boundary disclaimer', async () => {

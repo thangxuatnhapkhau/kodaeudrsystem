@@ -717,12 +717,13 @@ function render(){
  if(supplier()&&!['Workspace',...tabs].includes(view))view='My Tasks';
  $('pageTitle').textContent=tt(view==='Workspace'?'Order workspace':view);
  if($('defaultSidebarSection'))$('defaultSidebarSection').hidden=true;
+ const navShort={Dashboard:'DB',Orders:'SO','My Tasks':'TK',Calendar:'CL',Suppliers:'SP','AI Assistant':'AI',Export:'EX','Audit Trail':'AU',Users:'US',Settings:'ST'};
  const groups=[
   {label:'OPERATIONS',items:['Dashboard','Orders','My Tasks','Calendar'].filter(t=>tabs.includes(t))},
   {label:'EUDR MANAGEMENT',items:['Suppliers','AI Assistant','Export'].filter(t=>tabs.includes(t))},
   {label:'ADMINISTRATION',items:['Audit Trail','Users','Settings'].filter(t=>tabs.includes(t))}
  ].filter(g=>g.items.length>0);
- $('nav').innerHTML=groups.map(g=>`<div class="nav-group" role="group" aria-label="${esc(tt(g.label))}"><div class="sidebar-section" data-i18n="${esc(g.label)}">${esc(tt(g.label))}</div>${g.items.map(t=>`<button data-view="${t}" class="${view===t||(view==='Workspace'&&t==='Orders')?'active':''}" ${view===t?'aria-current="page"':''} title="${esc(tt(t))}">${t}</button>`).join('')}</div>`).join('');
+ $('nav').innerHTML=groups.map(g=>`<div class="nav-group" role="group" aria-label="${esc(tt(g.label))}"><div class="sidebar-section" data-i18n="${esc(g.label)}">${esc(tt(g.label))}</div>${g.items.map(t=>`<button data-view="${t}" data-short="${navShort[t]||t.slice(0,2).toUpperCase()}" class="${view===t||(view==='Workspace'&&t==='Orders')?'active':''}" ${view===t?'aria-current="page"':''} title="${esc(tt(t))}"><span class="nav-label" data-i18n="${esc(t)}">${esc(tt(t))}</span></button>`).join('')}</div>`).join('');
  $('nav').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   const sb=$('sidebar')||document.querySelector('.sidebar');
   if(sb?.classList?.contains('mobile-open')){sb.classList.remove('mobile-open');$('mobileMenuBtn')?.setAttribute('aria-expanded','false');}
