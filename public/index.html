@@ -4,37 +4,63 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#12372f">
-  <link rel="stylesheet" href="/style.css?v=2.9.5.1">
+  <link rel="stylesheet" href="/style.css?v=2.9.6">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="/geo.css?v=2.9.5">
+  <link rel="stylesheet" href="/geo.css?v=2.9.6">
   <link rel="icon" type="image/png" href="/eudr-workspace-icon.png?v=20261007">
   <link rel="apple-touch-icon" href="/eudr-workspace-icon.png?v=20261007">
   <title>KODA EUDR WORKSPACE</title>
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand"><img src="/koda-logo.png" alt="KODA official logo"><div class="brand-caption">EUDR <span>WORKSPACE</span></div></div>
-      <div class="sidebar-section" data-i18n="Operations">OPERATIONS</div>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar" aria-label="Workspace sidebar">
+      <div class="brand">
+        <div class="brand-main">
+          <img src="/koda-logo.png" alt="KODA official logo">
+          <div class="brand-caption">EUDR <span>WORKSPACE</span></div>
+        </div>
+        <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" aria-label="Toggle sidebar" aria-expanded="true" title="Collapse or expand sidebar">◂</button>
+      </div>
+      <div id="sidebarOrderContext" class="sidebar-order-context" hidden></div>
+      <div class="sidebar-section" id="defaultSidebarSection" data-i18n="Operations">OPERATIONS</div>
       <nav id="nav" aria-label="Main navigation"></nav>
-      <div class="sidebar-footer"><span class="pilot-mark">v2.9.5</span><p data-i18n="Evidence readiness supports human review. It is not a regulatory decision.">Evidence readiness supports human review. It is not a regulatory decision.</p></div>
+      <div class="sidebar-footer"><span class="pilot-mark">v2.9.5 · P2</span><p data-i18n="Evidence readiness supports human review. It is not a regulatory decision.">Evidence readiness supports human review. It is not a regulatory decision.</p></div>
     </aside>
     <div class="workspace-shell">
-      <header class="topbar"><div class="topbar-context"><span class="topbar-dot"></span><span id="pageTitle">Workspace</span></div><div class="topbar-account"><label class="language-control"><span class="sr-only">Language</span><select id="language" aria-label="Language"><option value="en">EN</option><option value="vi">VI</option></select></label><span id="identity"></span><button id="logout" class="quiet-button" hidden data-i18n="Sign out">Sign out</button></div></header>
-      <div class="content"><div id="msg" role="status" aria-live="polite"></div><main id="main">Loading your workspace…</main></div>
+      <header class="topbar">
+        <div class="topbar-context">
+          <button type="button" id="mobileMenuBtn" class="quiet-button mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
+          <div class="topbar-nav-controls" role="group" aria-label="History navigation">
+            <button type="button" id="navBackBtn" class="quiet-button nav-step-btn" aria-label="Back" title="Back" disabled>← <span data-i18n="Back">Back</span></button>
+            <button type="button" id="navForwardBtn" class="quiet-button nav-step-btn" aria-label="Forward" title="Forward" disabled><span data-i18n="Forward">Forward</span> →</button>
+          </div>
+          <span class="topbar-dot"></span>
+          <span id="pageTitle">Workspace</span>
+          <nav id="breadcrumbBar" class="breadcrumb-bar" aria-label="Breadcrumb"></nav>
+        </div>
+        <div class="topbar-account">
+          <button type="button" id="backToOrderBtn" class="quiet-button back-to-order-btn" hidden></button>
+          <button type="button" id="opsStatusBtn" class="quiet-button ops-status-btn" aria-label="Operation status" aria-expanded="false" aria-controls="operationCenterPanel"><span class="ops-status-dot" id="opsStatusDot"></span><span id="opsStatusLabel" data-i18n="Operations ready">Operations ready</span></button>
+          <label class="language-control"><span class="sr-only">Language</span><select id="language" aria-label="Language"><option value="en">EN</option><option value="vi">VI</option></select></label>
+          <span id="identity"></span>
+          <button id="logout" class="quiet-button" hidden data-i18n="Sign out">Sign out</button>
+        </div>
+      </header>
+      <section id="operationCenterPanel" class="operation-center-panel" role="region" aria-label="Operation Center" hidden></section>
+      <div class="content"><div id="msg" role="status" aria-live="polite"></div><div id="operationBanner" role="status" aria-live="polite" hidden></div><main id="main">Loading your workspace…</main></div>
     </div>
   </div>
-  <dialog id="drawer"><button id="closeDrawer" aria-label="Close dialog" data-i18n="Close">Close</button><div id="drawerContent"></div></dialog>
-  <script src="/i18n.js?v=2.9.5" defer></script>
-  <script src="/dossier.js?v=2.9.5" defer></script>
-  <script src="/smart-import.js?v=2.9.5" defer></script>
-  <script src="/trace.js?v=2.9.5" defer></script>
-  <script src="/material-review.js?v=2.9.5" defer></script>
-  <script src="/workspace-chat.js?v=2.9.5" defer></script>
-  <script src="/intelligence.js?v=2.9.5" defer></script>
+  <dialog id="drawer"><div class="drawer-topbar"><div id="drawerNavBar" class="drawer-nav-bar"></div><button id="closeDrawer" aria-label="Close dialog" data-i18n="Close">Close</button></div><div id="drawerContent"></div></dialog>
+  <script src="/i18n.js?v=2.9.6" defer></script>
+  <script src="/dossier.js?v=2.9.6" defer></script>
+  <script src="/smart-import.js?v=2.9.6" defer></script>
+  <script src="/trace.js?v=2.9.6" defer></script>
+  <script src="/material-review.js?v=2.9.6" defer></script>
+  <script src="/workspace-chat.js?v=2.9.6" defer></script>
+  <script src="/intelligence.js?v=2.9.6" defer></script>
   <script src="/vendor/leaflet/leaflet.js?v=1.9.4" defer></script>
-  <script src="/map-config.js?v=2.9.5" defer></script>
-  <script src="/geo.js?v=2.9.5" defer></script>
-  <script src="/app.js?v=2.9.5" defer></script>
+  <script src="/map-config.js?v=2.9.6" defer></script>
+  <script src="/geo.js?v=2.9.6" defer></script>
+  <script src="/app.js?v=2.9.6" defer></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 // Self-hosted PDF.js canvas preview. No browser PDF plugin, srcdoc, or inline CSS/JS.
-export async function renderPdfPreview(host,data,{signal,initialPage=1,loadLibrary=()=>import('/vendor/pdfjs/pdf.min.mjs')}={}){
+export async function renderPdfPreview(host,data,{signal,initialPage=1,onPageChange=null,loadLibrary=()=>import('/vendor/pdfjs/pdf.min.mjs')}={}){
  if(signal?.aborted)return ()=>{};
  const pdfjs=await loadLibrary();
  if(signal?.aborted)return ()=>{};
@@ -34,6 +34,7 @@ export async function renderPdfPreview(host,data,{signal,initialPage=1,loadLibra
    if(destroyed)return;
    const turn=++serial;renderTask?.cancel();renderTask=null;
    currentPage=Math.max(1,Math.min(documentProxy.numPages,pageNumber));
+   onPageChange?.(currentPage);
    previous.disabled=currentPage<=1;next.disabled=currentPage>=documentProxy.numPages;
    zoomOut.disabled=zoomFactor<=0.5;zoomIn.disabled=zoomFactor>=2.5;
    zoomReset.textContent=`${Math.round(zoomFactor*100)}%`;
