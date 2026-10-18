@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "scope": "SUPPLIER_IDENTITY_ONLY",
+  "production_execution": "DISABLED_PENDING_SEPARATE_RELEASE_APPROVAL",
+  "strategy": "APPEND_ONLY_HEADERS_AND_NEW_TABLES",
+  "supplier_columns": ["legal_name", "display_name", "registration_country", "registration_namespace", "registration_verified", "identity_status", "merged_into_id", "verified_at", "verified_by", "identity_evidence", "identity_revision"],
+  "new_tables": ["44_SUPPLIER_ALIASES", "45_SUPPLIER_MATCH_QUEUE", "46_SUPPLIER_MERGE_LOG"],
+  "existing_supplier_ids_changed": false,
+  "existing_references_rewritten": false,
+  "legal_verification_backfill": false,
+  "rollback_strategy": "DISABLE_FEATURE_KEEP_ADDITIVE_SCHEMA_AND_IMMUTABLE_AUDIT"
+}

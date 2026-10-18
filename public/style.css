@@ -974,16 +974,48 @@ dialog::backdrop{
   .sidebar-collapse-btn{
     display:none;
   }
-  .sidebar{
-    display:none;
+  .topbar{
+    height:auto;
+    min-height:58px;
+    flex-wrap:wrap;
+    padding:8px 16px;
+  }
+  .topbar-context,.topbar-account{
+    flex-wrap:wrap;
+    min-width:0;
+    max-width:100%;
   }
   .sidebar.mobile-open{
     display:flex;
     position:fixed;
     inset:0 auto 0 0;
     width:min(290px,86vw);
+    height:100vh;
     z-index:60;
     box-shadow:0 16px 40px rgba(0,0,0,.38);
+  }
+}
+@media(max-width:760px){
+  .nav-group{
+    display:flex;
+    flex-direction:row;
+    gap:4px;
+    margin:0;
+  }
+  .nav-group-label,.sidebar-order-context{
+    display:none;
+  }
+  .sidebar.mobile-open #nav{
+    flex-direction:column;
+    overflow-x:hidden;
+  }
+  .sidebar.mobile-open .nav-group{
+    display:grid;
+    margin-bottom:.65rem;
+  }
+  .sidebar.mobile-open .nav-group-label,
+  .sidebar.mobile-open .sidebar-order-context{
+    display:block;
   }
 }
 @media(prefers-reduced-motion:reduce){
@@ -994,3 +1026,13 @@ dialog::backdrop{
     scroll-behavior:auto!important;
   }
 }
+
+/* Supplier identity surfaces reuse the existing design tokens and controls. */
+.supplier-match{padding:1rem 0;border-bottom:1px solid var(--line,#dce3df)}
+.supplier-candidate{padding:1rem;margin:.6rem 0;border:1px solid var(--line,#dce3df);border-radius:.5rem}
+.supplier-candidate dl{display:grid;grid-template-columns:minmax(7rem,1fr) 2fr;gap:.25rem .75rem}
+.supplier-candidate dd{margin:0;overflow-wrap:anywhere}
+.supplier-status{font-weight:600}.supplier-match blockquote{white-space:pre-wrap;overflow-wrap:anywhere}
+#supplierRows td{vertical-align:top}#supplierRows button{display:block;margin:.3rem 0}
+#supplierMergePreview pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:600px){.supplier-candidate dl{grid-template-columns:1fr}.supplier-candidate dd{margin-bottom:.5rem}}

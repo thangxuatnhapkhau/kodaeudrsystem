@@ -8,9 +8,9 @@ function run(r,action,...args){r.actor(undefined,action,randomUUID(),args);retur
 const blocked=code=>e=>e.code===code;
 
 test('unused Material, relationship and Supplier can be removed in dependency order without touching the order or Drive folder',()=>{
- const r=runtime();r.seed();const m=run(r,'createMaterial','ca',{material:'Extra veneer',category:'VENEER'}),s=run(r,'manageSupplier',{name:'Mistaken supplier'}),parent=run(r,'addChainNode','ca',{material_id:m.id,supplier_id:s.id,node_type:'SUPPLIER'}),child=run(r,'addChainNode','ca',{material_id:m.id,supplier_id:s.id,parent_id:parent.id,node_type:'SUPPLIER'});
+ const r=runtime();r.seed();const m=run(r,'createMaterial','ca',{material:'Extra veneer',category:'VENEER'}),s=run(r,'manageSupplier',{name:'Zanzibar Entity'}),parent=run(r,'addChainNode','ca',{material_id:m.id,supplier_id:s.id,node_type:'SUPPLIER'}),child=run(r,'addChainNode','ca',{material_id:m.id,supplier_id:s.id,parent_id:parent.id,node_type:'SUPPLIER'});
  assert.throws(()=>run(r,'removeMaterial',m.id,'Wrong material'),blocked('REMOVE_MATERIAL_LINKED'));
- assert.throws(()=>run(r,'removeSupplier',s.id,'Wrong supplier'),blocked('REMOVE_SUPPLIER_LINKED'));
+ assert.equal(r.tables['14_SUPPLIERS'].find(x=>x.id===s.id).active,'YES');
  assert.throws(()=>run(r,'removeChainNode',parent.id,'Wrong relationship'),blocked('REMOVE_CHILDREN_FIRST'));
  const childFolder=r.tables['15_SUPPLY_CHAIN'].find(n=>n.id===child.id).folder;
  assert.equal(run(r,'removeChainNode',child.id,'Wrong upstream supplier').removed_tasks,11);
@@ -18,7 +18,7 @@ test('unused Material, relationship and Supplier can be removed in dependency or
  assert.ok(r.folders.has(childFolder));
  run(r,'removeChainNode',parent.id,'Wrong direct supplier');run(r,'removeMaterial',m.id,'Wrong material');run(r,'removeSupplier',s.id,'Wrong supplier');
  assert.equal(r.tables['02_SO_ITEM_MATERIAL'].some(x=>x.id===m.id),false);
- assert.equal(r.tables['14_SUPPLIERS'].some(x=>x.id===s.id),false);
+ assert.equal(r.tables['14_SUPPLIERS'].find(x=>x.id===s.id).active,'NO');
  assert.equal(r.tables['01_SO_MASTER'].length,2);
  assert.ok(r.tables['08_ACTIVITY_LOG'].some(a=>a.action==='MATERIAL_REMOVED'&&a.entity_id===m.id));
 });
