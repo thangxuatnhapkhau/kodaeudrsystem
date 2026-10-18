@@ -23,13 +23,10 @@ function manageUser(input){const actor=requireRole_(['ADMIN']);return lock_(()=>
  audit_('USER_SAVED','','',old?JSON.stringify(old):'',JSON.stringify(value),actor.email);return {email};
  });}
 
-function listSuppliers(query){const u=requireCapability_('SUPPLIER_EDIT'),q=text_(query||'',200).toLowerCase();return rows_('14_SUPPLIERS').filter(s=>[s.name,s.supplier_code].some(v=>String(v||'').toLowerCase().includes(q))).slice(0,100);}
-function manageSupplier(input){const u=requireCapability_('SUPPLIER_EDIT');return withOperation_(()=>{const name=text_(input.name||'',200),code=text_(input.supplier_code||'',100),all=rows_('14_SUPPLIERS'),id=input.id||stable_('supplier:'+u.email+':'+BRIDGE_REQUEST_KEY),old=all.find(s=>s.id===id);if(!name)fail_('INVALID_INPUT','Supplier name required');if(input.id&&!old)fail_('INVALID_INPUT','Supplier missing');const norm=s=>String(s||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();const duplicates=all.filter(s=>s.id!==id&&(norm(s.name)===norm(name)||code&&norm(s.supplier_code)===norm(code)));if(duplicates.length)fail_('HUMAN_MAPPING_REQUIRED','Review existing suppliers: '+duplicates.map(s=>s.id).join(', '));const value={name,supplier_code:code,active:input.active||'YES',updated_at:now_(),updated_by:u.email};if(!['YES','NO'].includes(value.active))fail_('INVALID_INPUT','Invalid active state');for(const k of ['address','country','contact_person','email','phone','registration'])value[k]=text_(input[k]||'',500);if(old)patch_('14_SUPPLIERS',id,value);else add_('14_SUPPLIERS',{...value,id,created_at:now_(),created_by:u.email});auditOnce_('SUPPLIER_SAVED','',id,JSON.stringify(old||{}),JSON.stringify(value),u);return {id};});}
-function removeSupplier(id,reason){const u=requireCapability_('SUPPLIER_EDIT');return withOperation_(()=>{
- const s=rows_('14_SUPPLIERS').find(x=>x.id===id);if(!s)fail_('INVALID_INPUT','Supplier missing');const note=removalReason_(reason);
- if(rows_('15_SUPPLY_CHAIN').some(n=>n.supplier_id===id)||rows_('02_SO_ITEM_MATERIAL').some(m=>m.supplier_id===id)||rows_('04_EVIDENCE_TRACKER').some(t=>t.supplier_id===id)||rows_('06_DOCUMENT_REGISTER').some(d=>d.supplier_id===id)||rows_('17_GEO_LOCATIONS').some(g=>g.supplier_id===id)||rows_('05_OWNER_MASTER').some(x=>x.supplier_id===id))fail_('REMOVE_SUPPLIER_LINKED','Supplier is linked to relationships, evidence or users; resolve those links first');
- auditOnce_('SUPPLIER_REMOVED','',id,JSON.stringify(s),JSON.stringify({reason:note}),u);delete_('14_SUPPLIERS',id);return {id};
- });}
+function listSuppliers(query){const u=requireCapability_('SUPPLIER_EDIT'),q=text_(query||'',200).toLowerCase();return rows_('14_SUPPLIERS').filter(s=>supplierActive_(s)&&[s.name,s.supplier_code].some(v=>String(v||'').toLowerCase().includes(q))).slice(0,100);}
+function manageSupplier(input){return manageSupplierIdentity_(input);}
+function removeSupplier(id,reason){return deactivateSupplierIdentity_(id,reason);}
+
 function prepareRemoveUser(email,reason){const actor=requireRole_(['ADMIN']);return withOperation_(()=>{
  const target=rows_('05_OWNER_MASTER').find(x=>x.email===email);if(!target||target.removed_at)fail_('INVALID_INPUT','Active user record required');if(target.email===actor.email||target.role==='ADMIN')fail_('PERMISSION_DENIED','Admin accounts cannot be removed here');const note=removalReason_(reason);
  if(!Object.prototype.hasOwnProperty.call(target,'removed_at'))fail_('SCHEMA_MISMATCH','Run migrateV2414 before removing a user');

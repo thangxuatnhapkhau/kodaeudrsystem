@@ -1,0 +1,14 @@
+# Isolated staging deployment guide
+
+The full stack remains unchanged. No new hosted database/framework is introduced. Netlify publishes public/ and bundles netlify/functions. Apps Script uses only apps_script/.
+
+1. Review the feature branch/draft PR against the recorded baseline; reconcile the 16 Drive/GitHub differences documented in the audit. Do not deploy the older Drive bundle blindly.
+2. Use the verified synthetic staging workbook and dedicated staging root identified in the separately authorized release ZIP. It has no real logins or source documents and is DISABLED after rollback testing. Use a restricted working folder/account boundary; the working boundary must be separately approved before credentials or live testing data are introduced.
+3. Create a separate Apps Script project. Add all 29 .gs files from apps_script/ and appsscript.json. Set configuration/apps-script-staging.properties.example.json with staging DB/root IDs and a fresh secret. Keep Calendar/paid AI disabled until test-only resources are explicitly configured. Provision a safe staging Admin with the existing Firebase workflow. Do not attachPreparedSheet/reconnectPreparedSheet: those legacy helpers point to prepared production resources.
+4. In the new project run dry-run, verified backup, apply and rollback drill entrypoints. Review source rows/IDs and schemas. Restore identity version only after documented checks. Authorize new script scopes through the deploying user's normal secure consent flow; never copy production tokens.
+5. Deploy this new Apps Script project as a staging web app. Record project ID, deployment ID, version, URL and bundle hashes. Never edit the production deployment to do this.
+6. Create a dedicated Netlify staging site or a preview with explicitly isolated configuration. Fill configuration/staging.env.example with a separate Firebase project/service account and fresh bridge secret. Set all STAGING_* bindings and STAGING_BACKEND_VERIFIED=true only after manual readback proves the endpoint DB/root and authentication project are staging. Inherited production settings are rejected by the preview guard. No production publish command is included.
+7. Run local checks, then all live UAT cases. Record actual deployed commit/version/URLs, logs and rollback evidence. A local browser PASS is not deployed UAT.
+8. After UAT and security sign-off, request separate production approval with exact source SHA, schema/backup hashes, IDs, dependency impact and rollback plan. This release is NOT_READY; do not set a generic approval flag to bypass the stage-only migration guard.
+
+Browser inventory exposed an existing Netlify deployment tab and Apps Script project tab, but CDP attachment repeatedly timed out. Their content, deployment commit and backend version could not be read. No staging backend/frontend deployment has been claimed.

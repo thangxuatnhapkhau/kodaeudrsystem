@@ -503,3 +503,13 @@ dialog::backdrop{
   }
 }
 
+
+/* Supplier identity surfaces reuse the existing design tokens and controls. */
+.supplier-match{padding:1rem 0;border-bottom:1px solid var(--line,#dce3df)}
+.supplier-candidate{padding:1rem;margin:.6rem 0;border:1px solid var(--line,#dce3df);border-radius:.5rem}
+.supplier-candidate dl{display:grid;grid-template-columns:minmax(7rem,1fr) 2fr;gap:.25rem .75rem}
+.supplier-candidate dd{margin:0;overflow-wrap:anywhere}
+.supplier-status{font-weight:600}.supplier-match blockquote{white-space:pre-wrap;overflow-wrap:anywhere}
+#supplierRows td{vertical-align:top}#supplierRows button{display:block;margin:.3rem 0}
+#supplierMergePreview pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:600px){.supplier-candidate dl{grid-template-columns:1fr}.supplier-candidate dd{margin-bottom:.5rem}}
