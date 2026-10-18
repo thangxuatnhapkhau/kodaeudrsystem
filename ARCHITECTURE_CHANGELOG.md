@@ -1,0 +1,10 @@
+# Architecture changelog — SI 1.0.0
+
+- Added SupplierIdentityService.gs: strict/Unicode normalization, candidate-only accent/punctuation/suffix/OCR search, verified registration/alias reuse, server-side queues, explicit decisions, shared proposal entity groups, durable chain intent/recovery and reference reconciliation.
+- Added SupplierGovernanceService.gs: scoped directory/usage/history, alias approvals, legal identity verification, durable supplier-save intent, deactivation preserving history, Admin merge preview/redirect/journal/rollback.
+- Added SupplierIdentityMigration.gs: editor-only stage guards, additive inventory/plan, hash-verified backup, migration postconditions and non-destructive feature rollback. Existing SCHEMA_VERSION is retained; SUPPLIER_IDENTITY_VERSION is separate.
+- Integrated existing manageSupplier/removeSupplier, material chain apply, active supplier selection and both bridge allowlists. Existing AI review schema, evidence excerpts, node/edge stable IDs, source snapshot/hash checks and Calendar behavior remain.
+- withOperation_ now invalidates pre-lock caches and rechecks the actor after acquiring the script lock. Check and write remain in the same protected section.
+- Added public/supplier-identity.js, matching review, directory/filter, alias review, identity verification and blocked merge preview. Existing brand/navigation/layout remain. English default and additive Vietnamese labels retained.
+- Netlify preview host/context guard rejects inherited configuration until explicit dedicated staging bindings are verified. Production hostname behavior is unchanged.
+- Tests use the existing Node/VM/JSDOM framework plus pinned-lockfile Playwright. Corrected two stale regression assumptions: supplier removal now deactivates; historical V27 migration must not create future identity tables. Updated browser fixture with current explicit product/source allocations and opens the current product menu before clicking its action. The Windows PDF test command now invokes the actual test module rather than a shell-quoted glob that discovered zero tests.

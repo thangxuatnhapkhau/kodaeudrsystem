@@ -1,9 +1,11 @@
+import {stagingFailure} from './_staging.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {firebaseAuth,verifiedActor,firebaseFailure} from './_firebase.mjs';
 import {signedBridge} from './_bridge.mjs';
 
 const reply=(statusCode,value)=>({statusCode,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},body:JSON.stringify(value)});
 export async function handler(event){
+ const previewError=stagingFailure(event);if(previewError)return previewError;
  const origin=event.headers?.origin||event.headers?.Origin||'',allowed=(process.env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim());
  if(event.httpMethod==='GET')return reply(200,{ok:true,apiKey:process.env.FIREBASE_WEB_API_KEY||'',projectId:process.env.FIREBASE_PROJECT_ID||'',enabled:!!(process.env.FIREBASE_PROJECT_ID&&process.env.FIREBASE_WEB_API_KEY&&process.env.FIREBASE_SERVICE_ACCOUNT_JSON)});
  if(!origin||!allowed.includes(origin))return reply(403,{ok:false,code:'ORIGIN_DENIED'});
