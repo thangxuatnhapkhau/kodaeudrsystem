@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-18T08:36:28Z",
+  "generated_at": "2026-10-18T09:07:10Z",
   "version": "2.9.5-p0-p1-p2",
   "files": [
     {
@@ -359,8 +359,8 @@
     },
     {
       "path": "apps_script/SupplierIdentityMigration.gs",
-      "bytes": 6970,
-      "sha256": "d908b850657ba4c23ff3aa3172f829003b47980b0e251eb84a58e80e15a4dfd3"
+      "bytes": 7710,
+      "sha256": "3e247152558239f94d0068b38187fd7bca271ffbefd2cede813f68fcac1e3ccb"
     },
     {
       "path": "apps_script/SupplierIdentityService.gs",
@@ -1074,8 +1074,8 @@
     },
     {
       "path": "KODA_EUDR_Netlify_Ready.zip",
-      "bytes": 26440192,
-      "sha256": "7819d88baaee5240f0c56072b367d98e91e8a20233571e9209ff074c4561f317"
+      "bytes": 26440351,
+      "sha256": "32297f9c3b539c02bd96c3e0de36f49c51170998a5a7a1c6ae7a909c8d5cd7c5"
     },
     {
       "path": "koda-logo.png",
@@ -1293,16 +1293,6 @@
       "sha256": "820ade8f674fa8ef2f249fde935985f617e89b7ee39b53fcde76610c9f41c0e8"
     },
     {
-      "path": "public/app.js",
-      "bytes": 158871,
-      "sha256": "820ade8f674fa8ef2f249fde935985f617e89b7ee39b53fcde76610c9f41c0e8"
-    },
-    {
-      "path": "public/app.js",
-      "bytes": 158871,
-      "sha256": "820ade8f674fa8ef2f249fde935985f617e89b7ee39b53fcde76610c9f41c0e8"
-    },
-    {
       "path": "public/dossier.js",
       "bytes": 17815,
       "sha256": "65405cd52f7f43eb4e337371797a2bd1fa4b84f1c0de8f984621b8af228dff03"
@@ -1326,26 +1316,6 @@
       "path": "public/i18n.js",
       "bytes": 112012,
       "sha256": "a7feef24e249500a00bcc53572caaee4a6eba07698293dec1e86f636568cf31b"
-    },
-    {
-      "path": "public/i18n.js",
-      "bytes": 112012,
-      "sha256": "a7feef24e249500a00bcc53572caaee4a6eba07698293dec1e86f636568cf31b"
-    },
-    {
-      "path": "public/i18n.js",
-      "bytes": 112012,
-      "sha256": "a7feef24e249500a00bcc53572caaee4a6eba07698293dec1e86f636568cf31b"
-    },
-    {
-      "path": "public/index.html",
-      "bytes": 4686,
-      "sha256": "9d5704ce7be84eed2b85a56061fb4e2aba3b536cc03e4064c129068ab72a5fbb"
-    },
-    {
-      "path": "public/index.html",
-      "bytes": 4686,
-      "sha256": "9d5704ce7be84eed2b85a56061fb4e2aba3b536cc03e4064c129068ab72a5fbb"
     },
     {
       "path": "public/index.html",
@@ -1386,16 +1356,6 @@
       "path": "public/smart-import.js",
       "bytes": 15203,
       "sha256": "119379a03187f6cb4c1a0f8e0af10e665aca7fe0c2128c479f40385cdc7087ae"
-    },
-    {
-      "path": "public/style.css",
-      "bytes": 65189,
-      "sha256": "238e7d6d2dbe1e45a607e67d395c695fd36e8dd00286a5639c577ff820a1ee60"
-    },
-    {
-      "path": "public/style.css",
-      "bytes": 65189,
-      "sha256": "238e7d6d2dbe1e45a607e67d395c695fd36e8dd00286a5639c577ff820a1ee60"
     },
     {
       "path": "public/style.css",
