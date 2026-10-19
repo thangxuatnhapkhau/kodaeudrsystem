@@ -711,15 +711,16 @@ function render(){
  if(view!=='Workspace')window.EudrWorkspaceChat?.stop?.(); window.EudrIntelligence?.stop?.();
  let tabs=supplier()?['Orders','My Tasks','Calendar']:['Dashboard','Orders','My Tasks','Calendar'];
  if(!supplier()&&!roles('VIEWER'))tabs.push('AI Assistant');
+ if(cap('AI_USE')||cap('AI_REVIEW')||roles('ADMIN'))tabs.push('Action Center');
  if(cap('EXPORT'))tabs.push('Export');
  if(!supplier())tabs.push('Audit Trail');
  if(cap('SUPPLIER_EDIT'))tabs.push('Suppliers');if(roles('ADMIN'))tabs.push('Users','Settings');
  if(supplier()&&!['Workspace',...tabs].includes(view))view='My Tasks';
  $('pageTitle').textContent=tt(view==='Workspace'?'Order workspace':view);
  if($('defaultSidebarSection'))$('defaultSidebarSection').hidden=true;
- const navShort={Dashboard:'DB',Orders:'SO','My Tasks':'TK',Calendar:'CL',Suppliers:'SP','AI Assistant':'AI',Export:'EX','Audit Trail':'AU',Users:'US',Settings:'ST'};
+ const navShort={Dashboard:'DB',Orders:'SO','My Tasks':'TK','Action Center':'AC',Calendar:'CL',Suppliers:'SP','AI Assistant':'AI',Export:'EX','Audit Trail':'AU',Users:'US',Settings:'ST'};
  const groups=[
-  {label:'OPERATIONS',items:['Dashboard','Orders','My Tasks','Calendar'].filter(t=>tabs.includes(t))},
+  {label:'OPERATIONS',items:['Dashboard','Orders','My Tasks','Action Center','Calendar'].filter(t=>tabs.includes(t))},
   {label:'EUDR MANAGEMENT',items:['Suppliers','AI Assistant','Export'].filter(t=>tabs.includes(t))},
   {label:'ADMINISTRATION',items:['Audit Trail','Users','Settings'].filter(t=>tabs.includes(t))}
  ].filter(g=>g.items.length>0);
@@ -731,9 +732,21 @@ function render(){
   if(b.dataset.view==='My Tasks')myTasksFilter='';
   go(b.dataset.view);
  });
- const screens={Dashboard:dashboard,Orders:orders,'My Tasks':myTasks,Calendar:calendar,'AI Assistant':promptStudio,Export:exports,'Audit Trail':audit,Workspace:workspace,Users:users,Suppliers:suppliers,Settings:settings};
+ const screens={Dashboard:dashboard,Orders:orders,'My Tasks':myTasks,'Action Center':actionCenterScreen,Calendar:calendar,'AI Assistant':promptStudio,Export:exports,'Audit Trail':audit,Workspace:workspace,Users:users,Suppliers:suppliers,Settings:settings};
  $('main').classList.toggle('my-tasks-screen',view==='My Tasks');
  (screens[view]||orders)();bind();bindDirtyTracking($('main'));EudrNav.updateNavChrome();EudrOps.togglePanel(false);i18n.translateUI(document);
+}
+function actionCenterScreen(){
+ $('main').innerHTML='';
+ window.EudrActionCenter?.render?.({
+  call,
+  state,
+  mount: $('main'),
+  openDocument: (docId, page)=>documentView(docId, page),
+  openOrder: (caseId)=>go('Workspace', caseId),
+  navigate: (opts)=>EudrNav.navigate(opts),
+  drawer
+ });
 }
 function orderProductNames(c){const names=(state.products||[]).filter(p=>p.case_id===c.id&&p.active==='YES').sort((a,b)=>Number(a.sequence||0)-Number(b.sequence||0)).map(p=>p.product_name).filter(Boolean);return names.join(', ')||c.product||c.customer||'—';}
 function isRequiredTask(t){return Boolean(t&&t.active!=='NO'&&t.required!=='NO'&&t.override_state!=='NOT_REQUIRED'&&t.override_state!=='OPTIONAL');}

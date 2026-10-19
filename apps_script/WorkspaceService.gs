@@ -13,6 +13,11 @@ function completeCase(caseId,input){const u=requireCapability_('WORKFLOW_CLOSE')
  if(!aiCoverageCurrent_(caseId))fail_('AI_REVIEW_REQUIRED','Review all current source versions before closure');
  if(legalState_().reviewDue)fail_('LEGAL_REVIEW_DUE','Legal baseline review is due');
  if(rows_('06_DOCUMENT_REGISTER').some(d=>d.case_id===caseId&&d.active_version==='YES'&&documentScopeActive_(d)&&d.expiry_date&&d.expiry_date<new Date().toISOString().slice(0,10)))fail_('EVIDENCE_INCOMPLETE','Resolve expired certificates before closure');
+ if(typeof evidenceActionSchema_==='function')evidenceActionSchema_();
+ const unresolvedIssues=rows_('37_REVIEW_ISSUES').filter(i=>i.case_id===caseId&&!['RESOLVED','REJECTED'].includes(i.status));
+ if(unresolvedIssues.length)fail_('CLOSURE_BLOCKED','Resolve all confirmed review issues before case closure ('+unresolvedIssues.length+' open)');
+ const staleReviews=rows_('36_AI_REVIEW_IMPORTS').filter(r=>r.case_id===caseId&&r.status==='STALE');
+ if(staleReviews.length)fail_('CLOSURE_BLOCKED','Rerun or resolve stale AI reviews before closure ('+staleReviews.length+' stale)');
  if(!rows_('19_EXPORT_LOG').some(ex=>ex.case_id===caseId&&ex.include_history!=='YES'))fail_('EXPORT_REQUIRED','Create an approved evidence export first');
  patch_('01_SO_MASTER',caseId,{status:'CLOSED',updated_at:now_()});audit_('ORDER_CLOSED',caseId,caseId,'READY_FOR_OPERATOR_REVIEW',JSON.stringify({status:'CLOSED',comment:input.comment,meaning:'Internal workflow closure only; no regulatory declaration'}),u.email);return {status:'CLOSED'};
  });}
@@ -27,6 +32,11 @@ function getDossierReview(caseId){const u=requireCapability_('WORKFLOW_CLOSE'),c
  if(rows_('07_AI_REVIEW_QUEUE').some(f=>f.case_id===caseId&&(!f.material_id||!rows_('02_SO_ITEM_MATERIAL').some(m=>m.id===f.material_id&&m.active==='NO'))&&f.status!=='REVIEWED')||!rows_('18_AI_PROMPT_RUNS').some(r=>r.case_id===caseId&&r.function==='DOCUMENT_REVIEW'&&r.result_status==='REVIEWED')||!aiCoverageCurrent_(caseId))add('AI_REVIEW_REQUIRED','Review findings against current source versions');
  if(config_('RULES_CONFIRMED')!=='YES'||legalState_().reviewDue)add('LEGAL_REVIEW_DUE','Legal baseline requires authorized review');
  if(rows_('06_DOCUMENT_REGISTER').some(d=>d.case_id===caseId&&d.active_version==='YES'&&documentScopeActive_(d)&&d.expiry_date&&d.expiry_date<new Date().toISOString().slice(0,10)))add('EXPIRED_CERTIFICATE','Review expired active evidence');
+ if(typeof evidenceActionSchema_==='function')evidenceActionSchema_();
+ const openIssues=rows_('37_REVIEW_ISSUES').filter(i=>i.case_id===caseId&&!['RESOLVED','REJECTED'].includes(i.status));
+ for(const i of openIssues)add('UNRESOLVED_ISSUE',(i.finding_id||i.id)+' · '+(i.required_action||i.status));
+ const staleReviews=rows_('36_AI_REVIEW_IMPORTS').filter(r=>r.case_id===caseId&&r.status==='STALE');
+ for(const r of staleReviews)add('STALE_REVIEW',r.id);
  if(!rows_('19_EXPORT_LOG').some(ex=>ex.case_id===caseId&&ex.include_history!=='YES'))add('EXPORT_REQUIRED','Create the approved evidence export');
  return {order_id:c.id,ready:blockers.length===0,blockers,materials:getMaterialReadiness(caseId)};
 }
