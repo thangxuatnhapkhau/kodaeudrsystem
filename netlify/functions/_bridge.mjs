@@ -1,3 +1,4 @@
+import {createHmac,randomUUID} from 'node:crypto';
 export function escapePayload(payload){
   return String(payload).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 }
