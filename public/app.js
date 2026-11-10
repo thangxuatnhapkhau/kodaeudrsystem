@@ -1,4 +1,4 @@
-let state,view='Dashboard',selected='',material='',selectedChainNode='',selectedSource='',workspaceTab='evidence',workspaceStep='order',busy=false,month=new Date(),calendarMode='Month',documentUrl='',pdfPreviewAbort=null,pdfPreviewCleanup=null,dashboardKpiFilter='',myTasksFilter='';
+var state,view='Dashboard',selected='',material='',selectedChainNode='',selectedSource='',workspaceTab='evidence',workspaceStep='order',busy=false,month=new Date(),calendarMode='Month',documentUrl='',pdfPreviewAbort=null,pdfPreviewCleanup=null,dashboardKpiFilter='',myTasksFilter='';
 const i18n=window.EudrI18n,tt=(s,v)=>i18n.t(s,v);
 let firebaseConfig,verificationPending=false,verificationEmail='';
 async function authConfig(){if(!firebaseConfig){const response=await fetch('/api/auth');firebaseConfig=await response.json();}return firebaseConfig;}
@@ -713,15 +713,15 @@ function render(){
  if(!supplier()&&!roles('VIEWER'))tabs.push('AI Assistant');
  if(cap('AI_USE')||cap('AI_REVIEW')||roles('ADMIN'))tabs.push('Action Center');
  if(cap('EXPORT'))tabs.push('Export');
- if(!supplier())tabs.push('Audit Trail');
+ if(!supplier())tabs.push('Wood Tracker','Audit Trail');
  if(cap('SUPPLIER_EDIT'))tabs.push('Suppliers');if(roles('ADMIN'))tabs.push('Users','Settings');
  if(supplier()&&!['Workspace',...tabs].includes(view))view='My Tasks';
  $('pageTitle').textContent=tt(view==='Workspace'?'Order workspace':view);
  if($('defaultSidebarSection'))$('defaultSidebarSection').hidden=true;
- const navShort={Dashboard:'DB',Orders:'SO','My Tasks':'TK','Action Center':'AC',Calendar:'CL',Suppliers:'SP','AI Assistant':'AI',Export:'EX','Audit Trail':'AU',Users:'US',Settings:'ST'};
+ const navShort={Dashboard:'DB',Orders:'SO','My Tasks':'TK','Action Center':'AC',Calendar:'CL','Wood Tracker':'WT',Suppliers:'SP','AI Assistant':'AI',Export:'EX','Audit Trail':'AU',Users:'US',Settings:'ST'};
  const groups=[
   {label:'OPERATIONS',items:['Dashboard','Orders','My Tasks','Action Center','Calendar'].filter(t=>tabs.includes(t))},
-  {label:'EUDR MANAGEMENT',items:['Suppliers','AI Assistant','Export'].filter(t=>tabs.includes(t))},
+  {label:'EUDR MANAGEMENT',items:['Wood Tracker','Suppliers','AI Assistant','Export'].filter(t=>tabs.includes(t))},
   {label:'ADMINISTRATION',items:['Audit Trail','Users','Settings'].filter(t=>tabs.includes(t))}
  ].filter(g=>g.items.length>0);
  $('nav').innerHTML=groups.map(g=>`<div class="nav-group" role="group" aria-label="${esc(tt(g.label))}"><div class="sidebar-section" data-i18n="${esc(g.label)}">${esc(tt(g.label))}</div>${g.items.map(t=>`<button data-view="${t}" data-short="${navShort[t]||t.slice(0,2).toUpperCase()}" class="${view===t||(view==='Workspace'&&t==='Orders')?'active':''}" ${view===t?'aria-current="page"':''} title="${esc(tt(t))}"><span class="nav-label" data-i18n="${esc(t)}">${esc(tt(t))}</span></button>`).join('')}</div>`).join('');
@@ -732,7 +732,7 @@ function render(){
   if(b.dataset.view==='My Tasks')myTasksFilter='';
   go(b.dataset.view);
  });
- const screens={Dashboard:dashboard,Orders:orders,'My Tasks':myTasks,'Action Center':actionCenterScreen,Calendar:calendar,'AI Assistant':promptStudio,Export:exports,'Audit Trail':audit,Workspace:workspace,Users:users,Suppliers:suppliers,Settings:settings};
+ const screens={Dashboard:dashboard,Orders:orders,'My Tasks':myTasks,'Action Center':actionCenterScreen,Calendar:calendar,'Wood Tracker':woodTrackerScreen,'AI Assistant':promptStudio,Export:exports,'Audit Trail':audit,Workspace:workspace,Users:users,Suppliers:suppliers,Settings:settings};
  $('main').classList.toggle('my-tasks-screen',view==='My Tasks');
  (screens[view]||orders)();bind();bindDirtyTracking($('main'));EudrNav.updateNavChrome();EudrOps.togglePanel(false);i18n.translateUI(document);
 }
@@ -748,6 +748,36 @@ function actionCenterScreen(){
   drawer
  });
 }
+function woodTrackerScreen(){
+  $('main').innerHTML='';
+  window.EudrWoodTracker?.render?.({
+   call,
+   state,
+   mount: $('main'),
+   openOrder: (caseId, materialId)=>{
+     selected=caseId;
+     if(materialId)material=materialId;
+     view='Workspace';
+     render();
+   },
+   openTrace: (caseId, materialId)=>{
+     window.EudrTrace?.open?.({
+       call,
+       state,
+       caseId,
+       productId:'',
+       materialId,
+       sourceId:'',
+       drawer,
+       refresh: async()=>{ await load(); return state; }
+     });
+   },
+   openMaterialInfo: (materialId)=>materialInfo(materialId),
+   openGeoReview: (materialId)=>geoDialog(materialId),
+   drawer
+  });
+}
+
 function orderProductNames(c){const names=(state.products||[]).filter(p=>p.case_id===c.id&&p.active==='YES').sort((a,b)=>Number(a.sequence||0)-Number(b.sequence||0)).map(p=>p.product_name).filter(Boolean);return names.join(', ')||c.product||c.customer||'—';}
 function isRequiredTask(t){return Boolean(t&&t.active!=='NO'&&t.required!=='NO'&&t.override_state!=='NOT_REQUIRED'&&t.override_state!=='OPTIONAL');}
 function filtered(){return state.cases.filter(c=>{
