@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check public/app.js && node --check public/geo.js && node --check public/supplier-identity.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs && node --check public/dossier.js && node --check public/smart-import.js && node --check public/ocr-import.mjs && node --check public/trace.js && node --check public/material-review.js",
+    "check": "node --check public/app.js && node --check public/action-center.js && node --check public/intelligence.js && node --check public/geo.js && node --check public/supplier-identity.js && node --check public/i18n.js && node --check netlify/functions/call.mjs && node --check netlify/functions/auth.mjs && node --check public/dossier.js && node --check public/smart-import.js && node --check public/ocr-import.mjs && node --check public/trace.js && node --check public/material-review.js",
     "test:pdf": "python tests/test_derived_pdf.py -v",
     "test:browser": "node tests/browser-v22.mjs",
     "test:identity": "node --test tests/supplier-*.test.mjs",
